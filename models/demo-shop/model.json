@@ -1,0 +1,3151 @@
+{
+  "schemaVersion": 1,
+  "product": {
+    "id": "demo-shop",
+    "name": "Demo shop",
+    "description": "Browser → gateway → order API → SQLite, with three third-party services. A tiny app that ships with nacholens, so every feature can be tried without a private repository."
+  },
+  "source": {
+    "repo": "demo/shop (built by nacholens demo)",
+    "commit": "e9f308776fd0d64ac269e02a5581415c2dfabf43"
+  },
+  "components": [
+    {
+      "id": "browser",
+      "kind": "client",
+      "label": "Browser\nvanilla JS",
+      "detail": "Static page from public/. Calls the API with same-origin fetch under /api and redirects the user to the login provider.",
+      "evidence": [
+        {
+          "file": "public/app.js",
+          "lines": [
+            6,
+            6
+          ],
+          "contains": "fetch(\"/api\" + path"
+        }
+      ]
+    },
+    {
+      "id": "gateway",
+      "kind": "gateway",
+      "label": "Gateway\nNode http",
+      "detail": "Serves public/ and forwards /api/* to the order API after a per-IP rate limit (120 requests per minute). Adds an x-request-id header.",
+      "evidence": [
+        {
+          "file": "gateway.js",
+          "lines": [
+            10,
+            10
+          ],
+          "contains": "const LIMIT_PER_MINUTE"
+        },
+        {
+          "file": "gateway.js",
+          "lines": [
+            26,
+            26
+          ],
+          "contains": "if (req.url.startsWith(\"/api/\"))"
+        }
+      ]
+    },
+    {
+      "id": "api",
+      "kind": "service",
+      "label": "Order API\nNode http",
+      "detail": "Handles sign-in, orders and the sales report. Every route except the two auth routes needs a valid session cookie; writes check the Origin header.",
+      "evidence": [
+        {
+          "file": "api.js",
+          "lines": [
+            36,
+            36
+          ],
+          "contains": "async function route(req, res)"
+        }
+      ],
+      "parts": [
+        {
+          "id": "auth-start",
+          "label": "GET /api/auth/start",
+          "role": "route",
+          "detail": "Starts sign-in: stores a one-time state and sends the user to the sign-in provider.",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                40,
+                40
+              ],
+              "contains": "if (key === \"GET /api/auth/start\")"
+            }
+          ]
+        },
+        {
+          "id": "auth-callback",
+          "label": "GET /api/auth/callback",
+          "role": "route",
+          "detail": "Where the sign-in provider sends the user back: checks the state, exchanges the code, issues a session.",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                49,
+                49
+              ],
+              "contains": "if (key === \"GET /api/auth/callback\")"
+            }
+          ]
+        },
+        {
+          "id": "session",
+          "label": "sessionOf (cookie → session)",
+          "role": "middleware",
+          "detail": "Finds the session from the sid cookie. Without one it ends with 401.",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                31,
+                34
+              ],
+              "contains": "function sessionOf(req)"
+            },
+            {
+              "file": "api.js",
+              "lines": [
+                59,
+                60
+              ],
+              "contains": "const me = sessionOf(req);"
+            }
+          ]
+        },
+        {
+          "id": "orders-get",
+          "label": "GET /api/orders",
+          "role": "route",
+          "detail": "My orders, returned with their delivery status.",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                62,
+                62
+              ],
+              "contains": "if (key === \"GET /api/orders\")"
+            }
+          ]
+        },
+        {
+          "id": "orders-post",
+          "label": "POST /api/orders",
+          "role": "route",
+          "detail": "Creates an order: checks the Origin and the input, then saves it.",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                68,
+                68
+              ],
+              "contains": "if (key === \"POST /api/orders\")"
+            }
+          ]
+        },
+        {
+          "id": "sales-get",
+          "label": "GET /api/reports/sales",
+          "role": "route",
+          "detail": "Sales report, admins only. Passes on what the analytics service returns.",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                77,
+                77
+              ],
+              "contains": "if (key === \"GET /api/reports/sales\")"
+            }
+          ]
+        },
+        {
+          "id": "track",
+          "label": "trackShipping",
+          "role": "service",
+          "detail": "Asks the carrier for the status of each order. On failure: unknown.",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                12,
+                18
+              ],
+              "contains": "async function trackShipping(rows)"
+            }
+          ]
+        },
+        {
+          "id": "db-module",
+          "label": "db.js",
+          "role": "adapter",
+          "detail": "Functions that read and write SQLite through node:sqlite.",
+          "evidence": [
+            {
+              "file": "db.js",
+              "lines": [
+                2,
+                5
+              ],
+              "contains": "import { DatabaseSync } from \"node:sqlite\";"
+            }
+          ],
+          "connects": "db"
+        },
+        {
+          "id": "fetch-ext",
+          "label": "fetch(EXTERNAL)",
+          "role": "adapter",
+          "detail": "Calls the external services (sign-in, carrier, analytics) over HTTP. The address is EXTERNAL_URL.",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                6,
+                6
+              ],
+              "contains": "const EXTERNAL = process.env.EXTERNAL_URL"
+            }
+          ]
+        }
+      ],
+      "wires": [
+        {
+          "from": "auth-start",
+          "to": "db-module",
+          "label": "saveState(state)",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                42,
+                42
+              ],
+              "contains": "saveState(state);"
+            }
+          ]
+        },
+        {
+          "from": "auth-callback",
+          "to": "db-module",
+          "label": "consumeState · saveSession",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                50,
+                50
+              ],
+              "contains": "if (!consumeState(url.searchParams.get(\"state\")"
+            },
+            {
+              "file": "api.js",
+              "lines": [
+                55,
+                55
+              ],
+              "contains": "saveSession(sid, email, SESSION_TTL_MS);"
+            }
+          ]
+        },
+        {
+          "from": "auth-callback",
+          "to": "fetch-ext",
+          "label": "POST /token(code)",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                51,
+                51
+              ],
+              "contains": "const token = await fetch(EXTERNAL + \"/token\""
+            }
+          ]
+        },
+        {
+          "from": "session",
+          "to": "db-module",
+          "label": "findSession(sid)",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                33,
+                33
+              ],
+              "contains": "return m ? findSession(m[1]) : null;"
+            }
+          ]
+        },
+        {
+          "from": "session",
+          "to": "orders-get",
+          "label": "me(email)",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                63,
+                63
+              ],
+              "contains": "const rows = listOrders(me.email);"
+            }
+          ]
+        },
+        {
+          "from": "session",
+          "to": "orders-post",
+          "label": "me(email)",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                73,
+                73
+              ],
+              "contains": "const id = insertOrder(me.email"
+            }
+          ]
+        },
+        {
+          "from": "session",
+          "to": "sales-get",
+          "label": "me(email)",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                78,
+                78
+              ],
+              "contains": "if (!ADMINS.has(me.email))"
+            }
+          ]
+        },
+        {
+          "from": "orders-get",
+          "to": "db-module",
+          "label": "listOrders(email)",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                63,
+                63
+              ],
+              "contains": "const rows = listOrders(me.email);"
+            }
+          ]
+        },
+        {
+          "from": "orders-get",
+          "to": "track",
+          "label": "trackShipping(rows)",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                64,
+                64
+              ],
+              "contains": "const shipping = await trackShipping(rows);"
+            }
+          ]
+        },
+        {
+          "from": "track",
+          "to": "fetch-ext",
+          "label": "GET /track?code=",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                15,
+                15
+              ],
+              "contains": "const r = await fetch(`${EXTERNAL}/track?code="
+            }
+          ]
+        },
+        {
+          "from": "orders-post",
+          "to": "db-module",
+          "label": "insertOrder(...)",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                73,
+                73
+              ],
+              "contains": "const id = insertOrder(me.email"
+            }
+          ]
+        },
+        {
+          "from": "sales-get",
+          "to": "fetch-ext",
+          "label": "GET /sales",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                79,
+                79
+              ],
+              "contains": "const r = await fetch(EXTERNAL + \"/sales\");"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "db",
+      "kind": "datastore",
+      "label": "SQLite\nnode:sqlite",
+      "detail": "Tables oauth_state, sessions and orders. In memory unless SHOP_DB names a file.",
+      "evidence": [
+        {
+          "file": "db.js",
+          "lines": [
+            8,
+            8
+          ],
+          "contains": "CREATE TABLE IF NOT EXISTS orders"
+        }
+      ],
+      "row": 1,
+      "tables": [
+        {
+          "name": "oauth_state",
+          "detail": "One-time sign-in state. Deleted as soon as it is checked.",
+          "columns": [
+            {
+              "name": "state",
+              "type": "TEXT",
+              "note": "Primary key"
+            },
+            {
+              "name": "created_at",
+              "type": "INTEGER"
+            }
+          ],
+          "evidence": [
+            {
+              "file": "db.js",
+              "lines": [
+                6,
+                6
+              ],
+              "contains": "CREATE TABLE IF NOT EXISTS oauth_state"
+            }
+          ]
+        },
+        {
+          "name": "sessions",
+          "detail": "Sign-in sessions, found by the sid cookie.",
+          "columns": [
+            {
+              "name": "id",
+              "type": "TEXT",
+              "note": "sid"
+            },
+            {
+              "name": "email",
+              "type": "TEXT"
+            },
+            {
+              "name": "expires_at",
+              "type": "INTEGER"
+            }
+          ],
+          "evidence": [
+            {
+              "file": "db.js",
+              "lines": [
+                7,
+                7
+              ],
+              "contains": "CREATE TABLE IF NOT EXISTS sessions"
+            }
+          ]
+        },
+        {
+          "name": "orders",
+          "detail": "Orders, with the delivery tracking code (tracking).",
+          "columns": [
+            {
+              "name": "id",
+              "type": "INTEGER"
+            },
+            {
+              "name": "email",
+              "type": "TEXT"
+            },
+            {
+              "name": "item",
+              "type": "TEXT"
+            },
+            {
+              "name": "qty",
+              "type": "INTEGER"
+            },
+            {
+              "name": "tracking",
+              "type": "TEXT",
+              "note": "Delivery tracking code"
+            },
+            {
+              "name": "created_at",
+              "type": "INTEGER"
+            }
+          ],
+          "evidence": [
+            {
+              "file": "db.js",
+              "lines": [
+                8,
+                11
+              ],
+              "contains": "CREATE TABLE IF NOT EXISTS orders"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "idp",
+      "kind": "external",
+      "label": "Login provider\nOAuth-style",
+      "detail": "Third-party sign-in. The demo ships a stand-in in mock-external.js with /authorize and /token.",
+      "evidence": [
+        {
+          "file": "mock-external.js",
+          "lines": [
+            7,
+            7
+          ],
+          "contains": "url.pathname === \"/authorize\""
+        }
+      ],
+      "row": 0,
+      "endpoints": [
+        {
+          "id": "authorize",
+          "method": "GET",
+          "path": "/authorize",
+          "auth": "None (browser redirect)",
+          "detail": "Sign-in consent screen. When done it redirects to redirect_uri with code and state.",
+          "request": [
+            {
+              "name": "state"
+            },
+            {
+              "name": "redirect_uri"
+            }
+          ],
+          "response": [
+            {
+              "name": "code",
+              "note": "Redirect query"
+            },
+            {
+              "name": "state",
+              "note": "Redirect query"
+            }
+          ],
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                44,
+                45
+              ],
+              "contains": "to.searchParams.set(\"state\", state);"
+            },
+            {
+              "file": "mock-external.js",
+              "lines": [
+                7,
+                9
+              ],
+              "contains": "if (url.pathname === \"/authorize\")"
+            }
+          ]
+        },
+        {
+          "id": "token",
+          "method": "POST",
+          "path": "/token",
+          "auth": "None (demo stand-in)",
+          "detail": "Exchanges the code for the user's details.",
+          "request": [
+            {
+              "name": "code"
+            }
+          ],
+          "response": [
+            {
+              "name": "email"
+            }
+          ],
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                51,
+                51
+              ],
+              "contains": "const token = await fetch(EXTERNAL + \"/token\""
+            },
+            {
+              "file": "mock-external.js",
+              "lines": [
+                11,
+                11
+              ],
+              "contains": "if (url.pathname === \"/token\")"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "shipping",
+      "kind": "external",
+      "label": "Shipping tracker\nHTTP JSON",
+      "detail": "Third-party tracking lookup. Called once per order that has a tracking code (v2 and later).",
+      "evidence": [
+        {
+          "file": "api.js",
+          "lines": [
+            12,
+            12
+          ],
+          "contains": "async function trackShipping"
+        }
+      ],
+      "row": 2,
+      "endpoints": [
+        {
+          "id": "track",
+          "method": "GET",
+          "path": "/track?code=",
+          "auth": "None (demo stand-in)",
+          "detail": "Delivery status of a tracking code.",
+          "request": [
+            {
+              "name": "code",
+              "note": "Query"
+            }
+          ],
+          "response": [
+            {
+              "name": "status",
+              "note": "e.g. in_transit"
+            }
+          ],
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                15,
+                16
+              ],
+              "contains": "const r = await fetch(`${EXTERNAL}/track?code="
+            },
+            {
+              "file": "mock-external.js",
+              "lines": [
+                12,
+                12
+              ],
+              "contains": "if (url.pathname === \"/track\")"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "analytics",
+      "kind": "external",
+      "label": "Analytics\nHTTP JSON",
+      "detail": "Third-party sales totals used by the report.",
+      "evidence": [
+        {
+          "file": "mock-external.js",
+          "lines": [
+            13,
+            13
+          ],
+          "contains": "url.pathname === \"/sales\""
+        }
+      ],
+      "row": 3,
+      "endpoints": [
+        {
+          "id": "sales",
+          "method": "GET",
+          "path": "/sales",
+          "auth": "None (demo stand-in)",
+          "detail": "Total sales and order count.",
+          "response": [
+            {
+              "name": "total"
+            },
+            {
+              "name": "orders"
+            }
+          ],
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                79,
+                79
+              ],
+              "contains": "const r = await fetch(EXTERNAL + \"/sales\");"
+            },
+            {
+              "file": "mock-external.js",
+              "lines": [
+                13,
+                13
+              ],
+              "contains": "if (url.pathname === \"/sales\")"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "a": "browser",
+      "b": "gateway",
+      "label": "HTTP, same origin /api/*",
+      "evidence": [
+        {
+          "file": "public/app.js",
+          "lines": [
+            6,
+            6
+          ],
+          "contains": "fetch(\"/api\" + path"
+        }
+      ]
+    },
+    {
+      "a": "gateway",
+      "b": "api",
+      "label": "HTTP forward with x-request-id",
+      "evidence": [
+        {
+          "file": "gateway.js",
+          "lines": [
+            27,
+            33
+          ],
+          "contains": "const upstream = await fetch(API + req.url"
+        }
+      ]
+    },
+    {
+      "a": "api",
+      "b": "db",
+      "label": "SQL (node:sqlite)",
+      "evidence": [
+        {
+          "file": "api.js",
+          "lines": [
+            4,
+            4
+          ],
+          "contains": "from \"./db.js\""
+        }
+      ]
+    },
+    {
+      "a": "api",
+      "b": "idp",
+      "label": "HTTPS: POST /token",
+      "evidence": [
+        {
+          "file": "api.js",
+          "lines": [
+            51,
+            51
+          ],
+          "contains": "fetch(EXTERNAL + \"/token\""
+        }
+      ]
+    },
+    {
+      "a": "api",
+      "b": "shipping",
+      "label": "HTTPS: GET /track",
+      "evidence": [
+        {
+          "file": "api.js",
+          "lines": [
+            15,
+            15
+          ],
+          "contains": "fetch(`${EXTERNAL}/track"
+        }
+      ]
+    },
+    {
+      "a": "api",
+      "b": "analytics",
+      "label": "HTTPS: GET /sales",
+      "evidence": [
+        {
+          "file": "api.js",
+          "lines": [
+            79,
+            79
+          ],
+          "contains": "fetch(EXTERNAL + \"/sales\")"
+        }
+      ]
+    },
+    {
+      "a": "browser",
+      "b": "idp",
+      "label": "Browser redirect to /authorize",
+      "evidence": [
+        {
+          "file": "api.js",
+          "lines": [
+            46,
+            46
+          ],
+          "contains": "location: to.toString()"
+        }
+      ]
+    }
+  ],
+  "useCases": [
+    {
+      "id": "sign-in",
+      "title": "Sign in with the login provider",
+      "summary": "The user is sent to a third-party provider and comes back with a one-time code that the API turns into a session cookie.",
+      "trigger": "GET /api/auth/start → provider → GET /api/auth/callback",
+      "steps": [
+        {
+          "id": "start",
+          "kind": "request",
+          "from": "browser",
+          "via": [
+            "gateway"
+          ],
+          "to": "api",
+          "label": "Start sign-in",
+          "narration": "The user clicks \"Sign in\". The browser asks /api/auth/start; the gateway rate-limits the request and forwards it to the order API.",
+          "request": "GET /api/auth/start",
+          "evidence": [
+            {
+              "file": "public/index.html",
+              "lines": [
+                5,
+                5
+              ],
+              "contains": "href=\"/api/auth/start\""
+            },
+            {
+              "file": "api.js",
+              "lines": [
+                40,
+                40
+              ],
+              "contains": "key === \"GET /api/auth/start\""
+            },
+            {
+              "file": "gateway.js",
+              "lines": [
+                24,
+                24
+              ],
+              "contains": "if (!allowed("
+            }
+          ],
+          "trace": [
+            "api/auth-start"
+          ]
+        },
+        {
+          "id": "make-state",
+          "kind": "internal",
+          "from": "api",
+          "to": "api",
+          "label": "Create a one-time state value",
+          "narration": "The API creates a random state value and builds the provider URL with that state and its own callback address.",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                41,
+                46
+              ],
+              "contains": "const state = randomUUID();"
+            }
+          ],
+          "trace": [
+            "api/auth-start"
+          ]
+        },
+        {
+          "id": "save-state",
+          "kind": "call",
+          "from": "api",
+          "to": "db",
+          "label": "Remember the state",
+          "narration": "The state is written to oauth_state so the callback can prove it started here.",
+          "request": "INSERT INTO oauth_state (state, created_at)",
+          "response": "ok",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                42,
+                42
+              ],
+              "contains": "saveState(state);"
+            },
+            {
+              "file": "db.js",
+              "lines": [
+                14,
+                16
+              ],
+              "contains": "export function saveState"
+            }
+          ],
+          "trace": [
+            "api/auth-start",
+            "api/db-module"
+          ],
+          "data": [
+            {
+              "store": "db",
+              "table": "oauth_state",
+              "op": "insert",
+              "columns": [
+                "state",
+                "created_at"
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    15,
+                    15
+                  ],
+                  "contains": "INSERT INTO oauth_state"
+                }
+              ]
+            }
+          ],
+          "payload": [
+            {
+              "leg": "request",
+              "format": "sql",
+              "title": "store the state",
+              "body": "INSERT INTO oauth_state (state, created_at) VALUES (?, ?)",
+              "bind": [
+                {
+                  "name": "?1 state",
+                  "value": "<uuid> randomUUID"
+                },
+                {
+                  "name": "?2 created_at",
+                  "value": "<int> Date.now(), ms"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    15,
+                    15
+                  ],
+                  "contains": "db.prepare(\"INSERT INTO oauth_state (state, created_at) VALUES (?, ?)\")"
+                }
+              ]
+            }
+          ],
+          "transforms": [
+            {
+              "at": "api/auth-start",
+              "in": {
+                "type": "(nothing)"
+              },
+              "out": {
+                "type": "state: <uuid>"
+              },
+              "map": [
+                {
+                  "from": "randomUUID()",
+                  "to": "state"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    41,
+                    42
+                  ],
+                  "contains": "const state = randomUUID();"
+                }
+              ]
+            },
+            {
+              "at": "api/db-module",
+              "in": {
+                "type": "state"
+              },
+              "out": {
+                "type": "oauth_state row",
+                "fields": [
+                  "state",
+                  "created_at"
+                ]
+              },
+              "map": [
+                {
+                  "from": "state",
+                  "to": "?1"
+                },
+                {
+                  "from": "Date.now()",
+                  "to": "created_at"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    14,
+                    16
+                  ],
+                  "contains": "export function saveState(state) {"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "redirect",
+          "kind": "response",
+          "from": "api",
+          "via": [
+            "gateway"
+          ],
+          "to": "browser",
+          "label": "Redirect to the provider",
+          "narration": "The API answers 302 with the provider URL. The gateway passes status and headers through unchanged.",
+          "response": "302 Location: provider /authorize?state=…",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                46,
+                46
+              ],
+              "contains": "return send(res, 302, { redirect: to.toString() }"
+            },
+            {
+              "file": "gateway.js",
+              "lines": [
+                37,
+                37
+              ],
+              "contains": "res.writeHead(upstream.status"
+            }
+          ],
+          "trace": [
+            "api/auth-start"
+          ],
+          "payload": [
+            {
+              "leg": "response",
+              "format": "http",
+              "title": "302 to the login provider",
+              "body": "HTTP 302\nlocation: <EXTERNAL>/authorize?state=<uuid>&redirect_uri=<PUBLIC_ORIGIN>/api/auth/callback\n\n{ \"redirect\": \"<same URL>\" }",
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    43,
+                    46
+                  ],
+                  "contains": "const to = new URL(EXTERNAL + \"/authorize\");"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "consent",
+          "kind": "request",
+          "from": "browser",
+          "to": "idp",
+          "label": "Pick an account at the provider",
+          "narration": "The browser talks to the provider directly, outside the gateway. The demo provider approves at once.",
+          "request": "GET /authorize?state=…&redirect_uri=…",
+          "response": "302 back to /api/auth/callback?code=…&state=…",
+          "evidence": [
+            {
+              "file": "mock-external.js",
+              "lines": [
+                7,
+                10
+              ],
+              "contains": "url.pathname === \"/authorize\""
+            }
+          ],
+          "endpoints": [
+            "idp/authorize"
+          ]
+        },
+        {
+          "id": "callback",
+          "kind": "request",
+          "from": "browser",
+          "via": [
+            "gateway"
+          ],
+          "to": "api",
+          "label": "Come back with the code",
+          "narration": "The provider sends the browser back to the callback address with the code and the state.",
+          "request": "GET /api/auth/callback?code=…&state=…",
+          "evidence": [
+            {
+              "file": "mock-external.js",
+              "lines": [
+                8,
+                8
+              ],
+              "contains": "location: `${url.searchParams.get(\"redirect_uri\")}"
+            },
+            {
+              "file": "api.js",
+              "lines": [
+                49,
+                49
+              ],
+              "contains": "key === \"GET /api/auth/callback\""
+            }
+          ],
+          "trace": [
+            "api/auth-callback"
+          ]
+        },
+        {
+          "id": "consume-state",
+          "kind": "call",
+          "from": "api",
+          "to": "db",
+          "label": "Use the state once",
+          "narration": "The state row is deleted in the same statement that reads it, so a replayed callback finds nothing and gets 400.",
+          "request": "DELETE FROM oauth_state … RETURNING state",
+          "response": "row or none",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                50,
+                50
+              ],
+              "contains": "if (!consumeState("
+            },
+            {
+              "file": "db.js",
+              "lines": [
+                20,
+                20
+              ],
+              "contains": "DELETE FROM oauth_state WHERE state = ? RETURNING state"
+            }
+          ],
+          "trace": [
+            "api/auth-callback",
+            "api/db-module"
+          ],
+          "data": [
+            {
+              "store": "db",
+              "table": "oauth_state",
+              "op": "delete",
+              "columns": [
+                "state"
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    20,
+                    20
+                  ],
+                  "contains": "DELETE FROM oauth_state WHERE state = ? RETURNING state"
+                }
+              ]
+            }
+          ],
+          "payload": [
+            {
+              "leg": "request",
+              "format": "sql",
+              "title": "use the state once (delete while reading)",
+              "body": "DELETE FROM oauth_state WHERE state = ? RETURNING state",
+              "bind": [
+                {
+                  "name": "?1 state",
+                  "value": "<uuid> query state"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    20,
+                    20
+                  ],
+                  "contains": "db.prepare(\"DELETE FROM oauth_state WHERE state = ? RETURNING state\")"
+                }
+              ]
+            },
+            {
+              "leg": "response",
+              "format": "row",
+              "title": "deleted row (null → 400)",
+              "columns": [
+                {
+                  "name": "state",
+                  "value": "<uuid>"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    20,
+                    20
+                  ],
+                  "contains": "db.prepare(\"DELETE FROM oauth_state WHERE state = ? RETURNING state\")"
+                },
+                {
+                  "file": "api.js",
+                  "lines": [
+                    50,
+                    50
+                  ],
+                  "contains": "if (!consumeState(url.searchParams.get(\"state\") ?? \"\")) return send(res, 400"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "exchange",
+          "kind": "call",
+          "from": "api",
+          "to": "idp",
+          "label": "Exchange the code",
+          "narration": "The API posts the code to the provider token endpoint and reads the verified email from the answer.",
+          "request": "POST /token {code}",
+          "response": "{ email }",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                51,
+                55
+              ],
+              "contains": "fetch(EXTERNAL + \"/token\""
+            },
+            {
+              "file": "mock-external.js",
+              "lines": [
+                11,
+                11
+              ],
+              "contains": "url.pathname === \"/token\""
+            }
+          ],
+          "trace": [
+            "api/auth-callback",
+            "api/fetch-ext"
+          ],
+          "endpoints": [
+            "idp/token"
+          ],
+          "payload": [
+            {
+              "leg": "request",
+              "format": "http",
+              "title": "POST /token",
+              "body": "POST <EXTERNAL>/token\n\n{ \"code\": \"<text> query code\" }",
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    51,
+                    51
+                  ],
+                  "contains": "const token = await fetch(EXTERNAL + \"/token\""
+                }
+              ]
+            },
+            {
+              "leg": "response",
+              "format": "json",
+              "title": "token reply (demo stand-in)",
+              "body": "{ \"email\": \"<email>\" }",
+              "evidence": [
+                {
+                  "file": "mock-external.js",
+                  "lines": [
+                    11,
+                    11
+                  ],
+                  "contains": "if (url.pathname === \"/token\")"
+                },
+                {
+                  "file": "api.js",
+                  "lines": [
+                    53,
+                    53
+                  ],
+                  "contains": "const { email } = await token.json();"
+                }
+              ]
+            }
+          ],
+          "transforms": [
+            {
+              "at": "api/auth-callback",
+              "in": {
+                "type": "query code"
+              },
+              "out": {
+                "type": "email"
+              },
+              "map": [
+                {
+                  "from": "code",
+                  "to": "body.code"
+                },
+                {
+                  "from": "reply email",
+                  "to": "email",
+                  "how": "502 on failure"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    51,
+                    53
+                  ],
+                  "contains": "const token = await fetch(EXTERNAL + \"/token\""
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "save-session",
+          "kind": "call",
+          "from": "api",
+          "to": "db",
+          "label": "Create the session",
+          "narration": "A random session id is stored with the email and an 8 hour expiry.",
+          "request": "INSERT INTO sessions (id, email, expires_at)",
+          "response": "ok",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                55,
+                55
+              ],
+              "contains": "saveSession(sid, email, SESSION_TTL_MS)"
+            },
+            {
+              "file": "db.js",
+              "lines": [
+                23,
+                25
+              ],
+              "contains": "export function saveSession"
+            }
+          ],
+          "trace": [
+            "api/auth-callback",
+            "api/db-module"
+          ],
+          "data": [
+            {
+              "store": "db",
+              "table": "sessions",
+              "op": "insert",
+              "columns": [
+                "id",
+                "email",
+                "expires_at"
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    24,
+                    24
+                  ],
+                  "contains": "INSERT INTO sessions (id, email, expires_at)"
+                }
+              ]
+            }
+          ],
+          "payload": [
+            {
+              "leg": "request",
+              "format": "sql",
+              "title": "create the session",
+              "body": "INSERT INTO sessions (id, email, expires_at) VALUES (?, ?, ?)",
+              "bind": [
+                {
+                  "name": "?1 id",
+                  "value": "<uuid> randomUUID"
+                },
+                {
+                  "name": "?2 email",
+                  "value": "<email>"
+                },
+                {
+                  "name": "?3 expires_at",
+                  "value": "<int> now + 8 h, ms"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    24,
+                    24
+                  ],
+                  "contains": "db.prepare(\"INSERT INTO sessions (id, email, expires_at) VALUES (?, ?, ?)\")"
+                },
+                {
+                  "file": "api.js",
+                  "lines": [
+                    8,
+                    8
+                  ],
+                  "contains": "const SESSION_TTL_MS = 8 * 60 * 60 * 1000;"
+                }
+              ]
+            }
+          ],
+          "transforms": [
+            {
+              "at": "api/db-module",
+              "in": {
+                "type": "sid, email, ttlMs"
+              },
+              "out": {
+                "type": "sessions row",
+                "fields": [
+                  "id",
+                  "email",
+                  "expires_at"
+                ]
+              },
+              "map": [
+                {
+                  "from": "ttlMs",
+                  "to": "expires_at",
+                  "how": "Date.now() + ttlMs"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    23,
+                    25
+                  ],
+                  "contains": "export function saveSession(id, email, ttlMs) {"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "done",
+          "kind": "response",
+          "from": "api",
+          "via": [
+            "gateway"
+          ],
+          "to": "browser",
+          "label": "Back to the shop with a cookie",
+          "narration": "302 to / with an HttpOnly, SameSite=Lax cookie that carries the session id.",
+          "response": "302 Location: /  Set-Cookie: sid=…",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                56,
+                56
+              ],
+              "contains": "return send(res, 302, { ok: true }"
+            }
+          ],
+          "trace": [
+            "api/auth-callback"
+          ],
+          "payload": [
+            {
+              "leg": "response",
+              "format": "http",
+              "title": "302 to the shop with a session cookie",
+              "body": "HTTP 302\nlocation: /\nset-cookie: sid=<uuid>; HttpOnly; SameSite=Lax; Path=/; Max-Age=<seconds>\n\n{ \"ok\": true }",
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    56,
+                    56
+                  ],
+                  "contains": "return send(res, 302, { ok: true }, { location: \"/\", \"set-cookie\":"
+                }
+              ]
+            }
+          ],
+          "transforms": [
+            {
+              "at": "api/auth-callback",
+              "in": {
+                "type": "sid"
+              },
+              "out": {
+                "type": "set-cookie header"
+              },
+              "map": [
+                {
+                  "from": "sid",
+                  "to": "sid=<uuid>",
+                  "how": "HttpOnly · SameSite=Lax"
+                },
+                {
+                  "from": "SESSION_TTL_MS",
+                  "to": "Max-Age",
+                  "how": "÷ 1000 (seconds)"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    56,
+                    56
+                  ],
+                  "contains": "return send(res, 302, { ok: true }, { location: \"/\", \"set-cookie\":"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "list-orders",
+      "title": "List my orders",
+      "summary": "The page loads the signed-in user's orders. For each order with a tracking code the API asks the shipping tracker for its status.",
+      "trigger": "GET /api/orders",
+      "steps": [
+        {
+          "id": "request",
+          "kind": "request",
+          "from": "browser",
+          "via": [
+            "gateway"
+          ],
+          "to": "api",
+          "label": "Load the order list",
+          "narration": "When the page opens, the browser asks /api/orders. The gateway checks the rate limit and forwards the request.",
+          "request": "GET /api/orders",
+          "evidence": [
+            {
+              "file": "public/app.js",
+              "lines": [
+                12,
+                12
+              ],
+              "contains": "api(\"/orders\")"
+            },
+            {
+              "file": "api.js",
+              "lines": [
+                62,
+                62
+              ],
+              "contains": "key === \"GET /api/orders\""
+            },
+            {
+              "file": "gateway.js",
+              "lines": [
+                24,
+                24
+              ],
+              "contains": "if (!allowed("
+            }
+          ],
+          "trace": [
+            "api/session"
+          ],
+          "payload": [
+            {
+              "leg": "request",
+              "format": "http",
+              "title": "GET /api/orders",
+              "body": "GET /api/orders\ncookie: sid=<uuid>",
+              "evidence": [
+                {
+                  "file": "public/app.js",
+                  "lines": [
+                    12,
+                    12
+                  ],
+                  "contains": "const { orders } = await api(\"/orders\");"
+                },
+                {
+                  "file": "public/app.js",
+                  "lines": [
+                    6,
+                    6
+                  ],
+                  "contains": "const res = await fetch(\"/api\" + path, { credentials: \"same-origin\""
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "session",
+          "kind": "call",
+          "from": "api",
+          "to": "db",
+          "label": "Check the session",
+          "narration": "The sid cookie is looked up in sessions. Missing or expired means 401 and nothing else runs.",
+          "request": "SELECT email FROM sessions WHERE id = ? AND expires_at > now",
+          "response": "email or none",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                31,
+                34
+              ],
+              "contains": "function sessionOf(req)"
+            },
+            {
+              "file": "api.js",
+              "lines": [
+                60,
+                60
+              ],
+              "contains": "if (!me) return send(res, 401"
+            },
+            {
+              "file": "db.js",
+              "lines": [
+                27,
+                29
+              ],
+              "contains": "export function findSession"
+            }
+          ],
+          "trace": [
+            "api/session",
+            "api/db-module"
+          ],
+          "data": [
+            {
+              "store": "db",
+              "table": "sessions",
+              "op": "read",
+              "columns": [
+                "id",
+                "email",
+                "expires_at"
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    28,
+                    28
+                  ],
+                  "contains": "SELECT email FROM sessions WHERE id = ? AND expires_at > ?"
+                }
+              ]
+            }
+          ],
+          "payload": [
+            {
+              "leg": "request",
+              "format": "sql",
+              "title": "find the session",
+              "body": "SELECT email FROM sessions WHERE id = ? AND expires_at > ?",
+              "bind": [
+                {
+                  "name": "?1 id",
+                  "value": "<uuid> cookie sid"
+                },
+                {
+                  "name": "?2 now",
+                  "value": "<int> now, ms"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    28,
+                    28
+                  ],
+                  "contains": "db.prepare(\"SELECT email FROM sessions WHERE id = ? AND expires_at > ?\")"
+                }
+              ]
+            },
+            {
+              "leg": "response",
+              "format": "row",
+              "title": "session row (null if none)",
+              "columns": [
+                {
+                  "name": "email",
+                  "value": "<email>"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    28,
+                    28
+                  ],
+                  "contains": "db.prepare(\"SELECT email FROM sessions WHERE id = ? AND expires_at > ?\")"
+                }
+              ]
+            }
+          ],
+          "transforms": [
+            {
+              "at": "api/session",
+              "in": {
+                "type": "Cookie header",
+                "fields": [
+                  "sid=<uuid>"
+                ]
+              },
+              "out": {
+                "type": "me | null",
+                "fields": [
+                  "email"
+                ]
+              },
+              "map": [
+                {
+                  "from": "cookie",
+                  "to": "sid",
+                  "how": "regex sid=([\\w-]+)"
+                },
+                {
+                  "from": "sid",
+                  "to": "findSession(sid)",
+                  "how": "unexpired rows only"
+                },
+                {
+                  "from": "none",
+                  "to": "401 unauthenticated"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    31,
+                    33
+                  ],
+                  "contains": "function sessionOf(req) {"
+                },
+                {
+                  "file": "api.js",
+                  "lines": [
+                    59,
+                    60
+                  ],
+                  "contains": "const me = sessionOf(req);"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "query",
+          "kind": "call",
+          "from": "api",
+          "to": "db",
+          "label": "Read the user's orders",
+          "narration": "The latest 50 orders of the signed-in email are read, newest first.",
+          "request": "SELECT … FROM orders WHERE email = ? ORDER BY id DESC LIMIT 50",
+          "response": "order rows",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                63,
+                63
+              ],
+              "contains": "const rows = listOrders(me.email);"
+            },
+            {
+              "file": "db.js",
+              "lines": [
+                31,
+                33
+              ],
+              "contains": "export function listOrders"
+            }
+          ],
+          "trace": [
+            "api/session",
+            "api/orders-get",
+            "api/db-module"
+          ],
+          "data": [
+            {
+              "store": "db",
+              "table": "orders",
+              "op": "read",
+              "columns": [
+                "id",
+                "item",
+                "qty",
+                "tracking",
+                "created_at",
+                "email"
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    32,
+                    32
+                  ],
+                  "contains": "SELECT id, item, qty, tracking, created_at FROM orders WHERE"
+                }
+              ]
+            }
+          ],
+          "payload": [
+            {
+              "leg": "request",
+              "format": "sql",
+              "title": "read my orders",
+              "body": "SELECT id, item, qty, tracking, created_at FROM orders\nWHERE email = ? ORDER BY id DESC LIMIT 50",
+              "bind": [
+                {
+                  "name": "?1 email",
+                  "value": "<email> from the session"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    32,
+                    32
+                  ],
+                  "contains": "db.prepare(\"SELECT id, item, qty, tracking, created_at FROM orders WHERE email = ?"
+                }
+              ]
+            },
+            {
+              "leg": "response",
+              "format": "row",
+              "title": "orders rows (up to 50)",
+              "columns": [
+                {
+                  "name": "id",
+                  "value": "INTEGER"
+                },
+                {
+                  "name": "item",
+                  "value": "TEXT"
+                },
+                {
+                  "name": "qty",
+                  "value": "INTEGER"
+                },
+                {
+                  "name": "tracking",
+                  "value": "TEXT | null"
+                },
+                {
+                  "name": "created_at",
+                  "value": "INTEGER ms"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    8,
+                    11
+                  ],
+                  "contains": "CREATE TABLE IF NOT EXISTS orders ("
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "shipping",
+          "kind": "call",
+          "from": "api",
+          "to": "shipping",
+          "label": "Ask the tracker for each status",
+          "narration": "Orders that have a tracking code are looked up in parallel. A failed lookup becomes \"unknown\" instead of failing the list.",
+          "request": "GET /track?code=TRK-… (one per order)",
+          "response": "{ status } per order",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                12,
+                18
+              ],
+              "contains": "async function trackShipping"
+            }
+          ],
+          "trace": [
+            "api/orders-get",
+            "api/track",
+            "api/fetch-ext"
+          ],
+          "endpoints": [
+            "shipping/track"
+          ],
+          "payload": [
+            {
+              "leg": "request",
+              "format": "http",
+              "title": "GET /track (per order)",
+              "body": "GET <EXTERNAL>/track?code=<tracking, URL-encoded>",
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    15,
+                    15
+                  ],
+                  "contains": "const r = await fetch(`${EXTERNAL}/track?code=${encodeURIComponent(o.tracking)}`)"
+                }
+              ]
+            },
+            {
+              "leg": "response",
+              "format": "json",
+              "title": "shipping status (demo stand-in)",
+              "body": "{ \"status\": \"<text> e.g. in_transit\" }",
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    16,
+                    16
+                  ],
+                  "contains": "return r && r.ok ? (await r.json()).status"
+                }
+              ]
+            }
+          ],
+          "transforms": [
+            {
+              "at": "api/track",
+              "in": {
+                "type": "orders rows",
+                "fields": [
+                  "tracking"
+                ]
+              },
+              "out": {
+                "type": "status strings"
+              },
+              "map": [
+                {
+                  "from": "no tracking",
+                  "to": "\"none\""
+                },
+                {
+                  "from": "reply status",
+                  "to": "status"
+                },
+                {
+                  "from": "call failed",
+                  "to": "\"unknown\""
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    12,
+                    17
+                  ],
+                  "contains": "async function trackShipping(rows) {"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "shape",
+          "kind": "internal",
+          "from": "api",
+          "to": "api",
+          "label": "Build the response",
+          "narration": "Each row becomes { id, item, qty, shipping, createdAt }. The database column names do not leave the server.",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                65,
+                65
+              ],
+              "contains": "orders: rows.map((o, i) =>"
+            }
+          ],
+          "trace": [
+            "api/orders-get"
+          ],
+          "transforms": [
+            {
+              "at": "api/orders-get",
+              "in": {
+                "type": "orders rows + statuses",
+                "fields": [
+                  "id",
+                  "item",
+                  "qty",
+                  "tracking",
+                  "created_at",
+                  "shipping[i]"
+                ]
+              },
+              "out": {
+                "type": "reply orders[]",
+                "fields": [
+                  "id",
+                  "item",
+                  "qty",
+                  "shipping",
+                  "createdAt"
+                ]
+              },
+              "map": [
+                {
+                  "from": "shipping[i]",
+                  "to": "shipping"
+                },
+                {
+                  "from": "created_at",
+                  "to": "createdAt",
+                  "how": "renamed only"
+                },
+                {
+                  "from": "tracking",
+                  "to": "(dropped)",
+                  "how": "not in the reply"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    65,
+                    65
+                  ],
+                  "contains": "return send(res, 200, { orders: rows.map((o, i) =>"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "response",
+          "kind": "response",
+          "from": "api",
+          "via": [
+            "gateway"
+          ],
+          "to": "browser",
+          "label": "Show the list with status",
+          "narration": "The page renders one line per order, including a readable shipping status.",
+          "response": "200 { orders: [{ id, item, qty, shipping, createdAt }] }",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                65,
+                65
+              ],
+              "contains": "return send(res, 200, { orders: rows.map"
+            },
+            {
+              "file": "public/app.js",
+              "lines": [
+                16,
+                16
+              ],
+              "contains": "li.textContent ="
+            },
+            {
+              "file": "gateway.js",
+              "lines": [
+                38,
+                38
+              ],
+              "contains": "return res.end(Buffer.from(await upstream.arrayBuffer()))"
+            }
+          ],
+          "trace": [
+            "api/orders-get"
+          ],
+          "payload": [
+            {
+              "leg": "response",
+              "format": "http",
+              "title": "200 order list",
+              "body": "HTTP 200\ncontent-type: application/json\n\n{ \"orders\": [\n  { \"id\": <int>, \"item\": \"<text>\", \"qty\": <int>,\n    \"shipping\": \"<text>\", \"createdAt\": <int ms> }\n] }",
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    65,
+                    65
+                  ],
+                  "contains": "return send(res, 200, { orders: rows.map((o, i) =>"
+                },
+                {
+                  "file": "api.js",
+                  "lines": [
+                    20,
+                    23
+                  ],
+                  "contains": "const send = (res, code, body, headers = {}) => {"
+                }
+              ]
+            }
+          ],
+          "transforms": [
+            {
+              "at": "api/orders-get",
+              "in": {
+                "type": "reply object"
+              },
+              "out": {
+                "type": "JSON body"
+              },
+              "map": [
+                {
+                  "from": "object",
+                  "to": "JSON.stringify"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    20,
+                    23
+                  ],
+                  "contains": "const send = (res, code, body, headers = {}) => {"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "place-order",
+      "title": "Place an order",
+      "summary": "A signed-in user submits an item and a quantity. The API checks origin and input, stores the order and returns its id.",
+      "trigger": "POST /api/orders",
+      "steps": [
+        {
+          "id": "request",
+          "kind": "request",
+          "from": "browser",
+          "via": [
+            "gateway"
+          ],
+          "to": "api",
+          "label": "Submit the form",
+          "narration": "The browser posts JSON. The gateway forwards the body untouched.",
+          "request": "POST /api/orders {item, qty}",
+          "evidence": [
+            {
+              "file": "public/app.js",
+              "lines": [
+                25,
+                25
+              ],
+              "contains": "method: \"POST\""
+            },
+            {
+              "file": "api.js",
+              "lines": [
+                68,
+                68
+              ],
+              "contains": "key === \"POST /api/orders\""
+            },
+            {
+              "file": "gateway.js",
+              "lines": [
+                24,
+                24
+              ],
+              "contains": "if (!allowed("
+            }
+          ],
+          "trace": [
+            "api/session"
+          ],
+          "payload": [
+            {
+              "leg": "request",
+              "format": "http",
+              "title": "POST /api/orders",
+              "body": "POST /api/orders\ncontent-type: application/json\norigin: <PUBLIC_ORIGIN>\ncookie: sid=<uuid>\n\n{ \"item\": \"<text>\", \"qty\": <int> }",
+              "evidence": [
+                {
+                  "file": "public/app.js",
+                  "lines": [
+                    24,
+                    27
+                  ],
+                  "contains": "await api(\"/orders\", {"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "session",
+          "kind": "call",
+          "from": "api",
+          "to": "db",
+          "label": "Check the session",
+          "narration": "The sid cookie is looked up in sessions. Missing or expired means 401 and nothing else runs.",
+          "request": "SELECT email FROM sessions WHERE id = ? AND expires_at > now",
+          "response": "email or none",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                31,
+                34
+              ],
+              "contains": "function sessionOf(req)"
+            },
+            {
+              "file": "api.js",
+              "lines": [
+                60,
+                60
+              ],
+              "contains": "if (!me) return send(res, 401"
+            },
+            {
+              "file": "db.js",
+              "lines": [
+                27,
+                29
+              ],
+              "contains": "export function findSession"
+            }
+          ],
+          "trace": [
+            "api/session",
+            "api/db-module"
+          ],
+          "data": [
+            {
+              "store": "db",
+              "table": "sessions",
+              "op": "read",
+              "columns": [
+                "id",
+                "email",
+                "expires_at"
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    28,
+                    28
+                  ],
+                  "contains": "SELECT email FROM sessions WHERE id = ? AND expires_at > ?"
+                }
+              ]
+            }
+          ],
+          "payload": [
+            {
+              "leg": "request",
+              "format": "sql",
+              "title": "find the session",
+              "body": "SELECT email FROM sessions WHERE id = ? AND expires_at > ?",
+              "bind": [
+                {
+                  "name": "?1 id",
+                  "value": "<uuid> cookie sid"
+                },
+                {
+                  "name": "?2 now",
+                  "value": "<int> now, ms"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    28,
+                    28
+                  ],
+                  "contains": "db.prepare(\"SELECT email FROM sessions WHERE id = ? AND expires_at > ?\")"
+                }
+              ]
+            },
+            {
+              "leg": "response",
+              "format": "row",
+              "title": "session row (null if none)",
+              "columns": [
+                {
+                  "name": "email",
+                  "value": "<email>"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    28,
+                    28
+                  ],
+                  "contains": "db.prepare(\"SELECT email FROM sessions WHERE id = ? AND expires_at > ?\")"
+                }
+              ]
+            }
+          ],
+          "transforms": [
+            {
+              "at": "api/session",
+              "in": {
+                "type": "Cookie header",
+                "fields": [
+                  "sid=<uuid>"
+                ]
+              },
+              "out": {
+                "type": "me | null",
+                "fields": [
+                  "email"
+                ]
+              },
+              "map": [
+                {
+                  "from": "cookie",
+                  "to": "sid",
+                  "how": "regex sid=([\\w-]+)"
+                },
+                {
+                  "from": "sid",
+                  "to": "findSession(sid)",
+                  "how": "unexpired rows only"
+                },
+                {
+                  "from": "none",
+                  "to": "401 unauthenticated"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    31,
+                    33
+                  ],
+                  "contains": "function sessionOf(req) {"
+                },
+                {
+                  "file": "api.js",
+                  "lines": [
+                    59,
+                    60
+                  ],
+                  "contains": "const me = sessionOf(req);"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "origin",
+          "kind": "internal",
+          "from": "api",
+          "to": "api",
+          "label": "Check the Origin header",
+          "narration": "A write is accepted only when the Origin header equals the shop's public origin; otherwise 403.",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                69,
+                69
+              ],
+              "contains": "req.headers.origin !== PUBLIC_ORIGIN"
+            }
+          ],
+          "trace": [
+            "api/session",
+            "api/orders-post"
+          ]
+        },
+        {
+          "id": "validate",
+          "kind": "internal",
+          "from": "api",
+          "to": "api",
+          "label": "Validate the input",
+          "narration": "item must be text (cut to 80 characters), qty a whole number from 1 to 99; anything else is 400.",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                70,
+                72
+              ],
+              "contains": "const body = await readBody(req);"
+            }
+          ],
+          "trace": [
+            "api/orders-post"
+          ],
+          "transforms": [
+            {
+              "at": "api/orders-post",
+              "in": {
+                "type": "request body (JSON)",
+                "fields": [
+                  "item",
+                  "qty"
+                ]
+              },
+              "out": {
+                "type": "validated order",
+                "fields": [
+                  "item: string",
+                  "qty: integer 1-99"
+                ]
+              },
+              "map": [
+                {
+                  "from": "body",
+                  "to": "body",
+                  "how": "JSON.parse, null on failure"
+                },
+                {
+                  "from": "item not a string · qty out of range",
+                  "to": "400 invalid_order"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    70,
+                    72
+                  ],
+                  "contains": "const body = await readBody(req);"
+                },
+                {
+                  "file": "api.js",
+                  "lines": [
+                    25,
+                    28
+                  ],
+                  "contains": "const readBody = (req) => new Promise((resolve) => {"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "insert",
+          "kind": "call",
+          "from": "api",
+          "to": "db",
+          "label": "Store the order",
+          "narration": "The order is inserted with the user's email and, from v2 on, a generated tracking code.",
+          "request": "INSERT INTO orders (email, item, qty, tracking, created_at)",
+          "response": "new id",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                73,
+                73
+              ],
+              "contains": "const id = insertOrder("
+            },
+            {
+              "file": "db.js",
+              "lines": [
+                35,
+                38
+              ],
+              "contains": "export function insertOrder"
+            }
+          ],
+          "trace": [
+            "api/orders-post",
+            "api/db-module"
+          ],
+          "data": [
+            {
+              "store": "db",
+              "table": "orders",
+              "op": "insert",
+              "columns": [
+                "email",
+                "item",
+                "qty",
+                "tracking",
+                "created_at"
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    36,
+                    36
+                  ],
+                  "contains": "INSERT INTO orders (email, item, qty, tracking, created_at)"
+                }
+              ]
+            }
+          ],
+          "payload": [
+            {
+              "leg": "request",
+              "format": "sql",
+              "title": "store the order",
+              "body": "INSERT INTO orders (email, item, qty, tracking, created_at)\nVALUES (?, ?, ?, ?, ?)",
+              "bind": [
+                {
+                  "name": "?1 email",
+                  "value": "<email> from the session"
+                },
+                {
+                  "name": "?2 item",
+                  "value": "<text> up to 80 chars"
+                },
+                {
+                  "name": "?3 qty",
+                  "value": "<int 1-99>"
+                },
+                {
+                  "name": "?4 tracking",
+                  "value": "TRK-<8 chars>"
+                },
+                {
+                  "name": "?5 created_at",
+                  "value": "<int> Date.now(), ms"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    36,
+                    36
+                  ],
+                  "contains": "db.prepare(\"INSERT INTO orders (email, item, qty, tracking, created_at) VALUES (?, ?, ?, ?, ?)\")"
+                }
+              ]
+            },
+            {
+              "leg": "response",
+              "format": "row",
+              "title": "insert result",
+              "columns": [
+                {
+                  "name": "lastInsertRowid",
+                  "value": "<int> new order id"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    37,
+                    37
+                  ],
+                  "contains": "return Number(r.lastInsertRowid);"
+                }
+              ]
+            }
+          ],
+          "transforms": [
+            {
+              "at": "api/orders-post",
+              "in": {
+                "type": "validated order",
+                "fields": [
+                  "item",
+                  "qty",
+                  "me.email"
+                ]
+              },
+              "out": {
+                "type": "insertOrder arguments",
+                "fields": [
+                  "email",
+                  "item (cut to 80)",
+                  "qty",
+                  "tracking"
+                ]
+              },
+              "map": [
+                {
+                  "from": "item",
+                  "to": "item.slice(0, 80)"
+                },
+                {
+                  "from": "(nothing)",
+                  "to": "tracking",
+                  "how": "\"TRK-\" + first 8 of randomUUID"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    73,
+                    73
+                  ],
+                  "contains": "const id = insertOrder(me.email, body.item.slice(0, 80), body.qty, \"TRK-\" + randomUUID().slice(0, 8));"
+                }
+              ]
+            },
+            {
+              "at": "api/db-module",
+              "in": {
+                "type": "email, item, qty, tracking"
+              },
+              "out": {
+                "type": "orders row → id"
+              },
+              "map": [
+                {
+                  "from": "Date.now()",
+                  "to": "created_at"
+                },
+                {
+                  "from": "lastInsertRowid",
+                  "to": "id",
+                  "how": "Number"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    35,
+                    38
+                  ],
+                  "contains": "export function insertOrder(email, item, qty, tracking) {"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "response",
+          "kind": "response",
+          "from": "api",
+          "via": [
+            "gateway"
+          ],
+          "to": "browser",
+          "label": "Return the new id",
+          "narration": "201 with { id }; the page reloads the list.",
+          "response": "201 { id }",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                74,
+                74
+              ],
+              "contains": "return send(res, 201, { id })"
+            },
+            {
+              "file": "public/app.js",
+              "lines": [
+                29,
+                29
+              ],
+              "contains": "await loadOrders();"
+            }
+          ],
+          "trace": [
+            "api/orders-post"
+          ],
+          "payload": [
+            {
+              "leg": "response",
+              "format": "http",
+              "title": "201 new order id",
+              "body": "HTTP 201\ncontent-type: application/json\n\n{ \"id\": <int> }",
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    74,
+                    74
+                  ],
+                  "contains": "return send(res, 201, { id });"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sales-report",
+      "title": "Sales report (admin only)",
+      "summary": "Only emails on the admin list may read totals, which come from a third-party analytics service.",
+      "trigger": "GET /api/reports/sales",
+      "steps": [
+        {
+          "id": "request",
+          "kind": "request",
+          "from": "browser",
+          "via": [
+            "gateway"
+          ],
+          "to": "api",
+          "label": "Ask for the totals",
+          "narration": "The page requests the report after loading.",
+          "request": "GET /api/reports/sales",
+          "evidence": [
+            {
+              "file": "public/app.js",
+              "lines": [
+                33,
+                33
+              ],
+              "contains": "api(\"/reports/sales\")"
+            },
+            {
+              "file": "api.js",
+              "lines": [
+                77,
+                77
+              ],
+              "contains": "key === \"GET /api/reports/sales\""
+            },
+            {
+              "file": "gateway.js",
+              "lines": [
+                24,
+                24
+              ],
+              "contains": "if (!allowed("
+            }
+          ],
+          "trace": [
+            "api/session"
+          ]
+        },
+        {
+          "id": "session",
+          "kind": "call",
+          "from": "api",
+          "to": "db",
+          "label": "Check the session",
+          "narration": "The sid cookie is looked up in sessions. Missing or expired means 401 and nothing else runs.",
+          "request": "SELECT email FROM sessions WHERE id = ? AND expires_at > now",
+          "response": "email or none",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                31,
+                34
+              ],
+              "contains": "function sessionOf(req)"
+            },
+            {
+              "file": "api.js",
+              "lines": [
+                60,
+                60
+              ],
+              "contains": "if (!me) return send(res, 401"
+            },
+            {
+              "file": "db.js",
+              "lines": [
+                27,
+                29
+              ],
+              "contains": "export function findSession"
+            }
+          ],
+          "trace": [
+            "api/session",
+            "api/db-module"
+          ],
+          "data": [
+            {
+              "store": "db",
+              "table": "sessions",
+              "op": "read",
+              "columns": [
+                "id",
+                "email",
+                "expires_at"
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    28,
+                    28
+                  ],
+                  "contains": "SELECT email FROM sessions WHERE id = ? AND expires_at > ?"
+                }
+              ]
+            }
+          ],
+          "payload": [
+            {
+              "leg": "request",
+              "format": "sql",
+              "title": "find the session",
+              "body": "SELECT email FROM sessions WHERE id = ? AND expires_at > ?",
+              "bind": [
+                {
+                  "name": "?1 id",
+                  "value": "<uuid> cookie sid"
+                },
+                {
+                  "name": "?2 now",
+                  "value": "<int> now, ms"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    28,
+                    28
+                  ],
+                  "contains": "db.prepare(\"SELECT email FROM sessions WHERE id = ? AND expires_at > ?\")"
+                }
+              ]
+            },
+            {
+              "leg": "response",
+              "format": "row",
+              "title": "session row (null if none)",
+              "columns": [
+                {
+                  "name": "email",
+                  "value": "<email>"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    28,
+                    28
+                  ],
+                  "contains": "db.prepare(\"SELECT email FROM sessions WHERE id = ? AND expires_at > ?\")"
+                }
+              ]
+            }
+          ],
+          "transforms": [
+            {
+              "at": "api/session",
+              "in": {
+                "type": "Cookie header",
+                "fields": [
+                  "sid=<uuid>"
+                ]
+              },
+              "out": {
+                "type": "me | null",
+                "fields": [
+                  "email"
+                ]
+              },
+              "map": [
+                {
+                  "from": "cookie",
+                  "to": "sid",
+                  "how": "regex sid=([\\w-]+)"
+                },
+                {
+                  "from": "sid",
+                  "to": "findSession(sid)",
+                  "how": "unexpired rows only"
+                },
+                {
+                  "from": "none",
+                  "to": "401 unauthenticated"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    31,
+                    33
+                  ],
+                  "contains": "function sessionOf(req) {"
+                },
+                {
+                  "file": "api.js",
+                  "lines": [
+                    59,
+                    60
+                  ],
+                  "contains": "const me = sessionOf(req);"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "admin-check",
+          "kind": "internal",
+          "from": "api",
+          "to": "api",
+          "label": "Check the admin list",
+          "narration": "The session email must be in ADMIN_EMAILS (default: the demo buyer); otherwise 403.",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                9,
+                9
+              ],
+              "contains": "const ADMINS = new Set("
+            },
+            {
+              "file": "api.js",
+              "lines": [
+                78,
+                78
+              ],
+              "contains": "if (!ADMINS.has(me.email))"
+            }
+          ],
+          "trace": [
+            "api/session",
+            "api/sales-get"
+          ]
+        },
+        {
+          "id": "analytics",
+          "kind": "call",
+          "from": "api",
+          "to": "analytics",
+          "label": "Fetch the totals",
+          "narration": "The API calls the analytics service. If it fails the API answers 502 instead of guessing numbers.",
+          "request": "GET /sales",
+          "response": "{ total, orders }",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                79,
+                80
+              ],
+              "contains": "const r = await fetch(EXTERNAL + \"/sales\");"
+            },
+            {
+              "file": "mock-external.js",
+              "lines": [
+                13,
+                13
+              ],
+              "contains": "url.pathname === \"/sales\""
+            }
+          ],
+          "trace": [
+            "api/sales-get",
+            "api/fetch-ext"
+          ],
+          "endpoints": [
+            "analytics/sales"
+          ],
+          "payload": [
+            {
+              "leg": "request",
+              "format": "http",
+              "title": "GET /sales",
+              "body": "GET <EXTERNAL>/sales",
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    79,
+                    79
+                  ],
+                  "contains": "const r = await fetch(EXTERNAL + \"/sales\");"
+                }
+              ]
+            },
+            {
+              "leg": "response",
+              "format": "json",
+              "title": "sales totals (demo stand-in)",
+              "body": "{ \"total\": <int>, \"orders\": <int> }",
+              "evidence": [
+                {
+                  "file": "mock-external.js",
+                  "lines": [
+                    13,
+                    13
+                  ],
+                  "contains": "if (url.pathname === \"/sales\")"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "response",
+          "kind": "response",
+          "from": "api",
+          "via": [
+            "gateway"
+          ],
+          "to": "browser",
+          "label": "Show the totals",
+          "narration": "The totals are passed through and shown under the order list.",
+          "response": "200 { total, orders }",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                81,
+                81
+              ],
+              "contains": "return send(res, 200, await r.json());"
+            },
+            {
+              "file": "public/app.js",
+              "lines": [
+                33,
+                33
+              ],
+              "contains": "$(\"sales\").textContent"
+            }
+          ],
+          "trace": [
+            "api/sales-get"
+          ],
+          "payload": [
+            {
+              "leg": "response",
+              "format": "http",
+              "title": "200 totals as received",
+              "body": "HTTP 200\ncontent-type: application/json\n\n{ \"total\": <int>, \"orders\": <int> }",
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    81,
+                    81
+                  ],
+                  "contains": "return send(res, 200, await r.json());"
+                }
+              ]
+            }
+          ],
+          "transforms": [
+            {
+              "at": "api/sales-get",
+              "in": {
+                "type": "analytics JSON"
+              },
+              "out": {
+                "type": "reply JSON"
+              },
+              "map": [
+                {
+                  "from": "body",
+                  "to": "passed through",
+                  "how": "502 on failure"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    80,
+                    81
+                  ],
+                  "contains": "if (!r.ok) return send(res, 502, { error: \"analytics_unavailable\" });"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

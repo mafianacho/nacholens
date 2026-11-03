@@ -1,0 +1,56 @@
+{
+  "title": "⬆ Bump the python-packages group across 1 directory with 8 updates (#2497)",
+  "summary": "Generated from git diff: 1 changed steps, 1 changed components (backend), 3 changed files outside the model, 1 ignored files.",
+  "ref": "fastapi/full-stack-fastapi-template 1762ada..754ff56",
+  "components": [
+    {
+      "id": "backend",
+      "change": "modified",
+      "note": "Component evidence code changed: backend/pyproject.toml:10, 16"
+    }
+  ],
+  "steps": [
+    {
+      "useCase": "create-item",
+      "step": "stamp",
+      "change": "modified",
+      "note": "Evidence code changed: backend/app/models.py:89"
+    }
+  ],
+  "unmapped": [
+    {
+      "file": ".github/workflows/bump-pre-commit-hooks.yml",
+      "category": "config",
+      "status": "modified",
+      "lines": "38, 65 (2 hunks)",
+      "hint": "Not in the evidence of any use-case step: add the path to the model, or confirm the change is unrelated"
+    },
+    {
+      "file": "backend/pyproject.toml",
+      "category": "config",
+      "status": "modified",
+      "lines": "10, 16 (2 hunks)",
+      "hint": "Overlaps the evidence of component backend, but no step"
+    },
+    {
+      "file": "pyproject.toml",
+      "category": "config",
+      "status": "modified",
+      "lines": "3-5 (1 hunk)",
+      "hint": "Not in the evidence of any use-case step: add the path to the model, or confirm the change is unrelated"
+    }
+  ],
+  "ignored": [
+    {
+      "file": "uv.lock",
+      "reason": "lockfile"
+    }
+  ],
+  "generated": {
+    "by": "nacholens diff",
+    "base": "1762adac607a1b29cfc4da129557780beea71616",
+    "head": "754ff56c5a91ef5abcc8af20fef2bd632140cc3f",
+    "modelCommit": "f4bcfaba7c85be3c6332cc74a20819f586dcdbc6",
+    "lineTranslation": true
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "title": "Show the delivery status in the order list",
+  "source": "Example planning note (demo shop)",
+  "expectations": [
+    {
+      "id": "ship-lookup",
+      "text": "The order list asks the carrier for the status and shows it",
+      "useCase": "list-orders",
+      "check": {
+        "type": "step",
+        "match": {
+          "kind": "call",
+          "to": "shipping"
+        }
+      }
+    },
+    {
+      "id": "ship-fail-soft",
+      "text": "The order list still shows when the carrier lookup fails",
+      "useCase": "list-orders",
+      "check": {
+        "type": "step",
+        "match": {
+          "text": "failed lookup|instead of failing"
+        }
+      }
+    },
+    {
+      "id": "login-first",
+      "text": "The order list reads orders only after checking the sign-in (session)",
+      "useCase": "list-orders",
+      "check": {
+        "type": "order",
+        "first": {
+          "table": "sessions",
+          "op": "read"
+        },
+        "then": {
+          "table": "orders",
+          "op": "read"
+        }
+      }
+    },
+    {
+      "id": "admin-only",
+      "text": "Only admins can see the sales report",
+      "useCase": "sales-report",
+      "check": {
+        "type": "order",
+        "first": {
+          "text": "admin"
+        },
+        "then": {
+          "to": "analytics"
+        }
+      }
+    },
+    {
+      "id": "address-check",
+      "text": "Creating an order validates the delivery address",
+      "useCase": "place-order",
+      "check": {
+        "type": "step",
+        "match": {
+          "text": "address"
+        }
+      }
+    },
+    {
+      "id": "ship-wording",
+      "text": "Delivery status words are easy for customers to understand"
+    }
+  ]
+}

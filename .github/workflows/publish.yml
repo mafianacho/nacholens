@@ -1,0 +1,45 @@
+name: publish
+
+# Manual only: Actions -> publish -> Run workflow, typing the version in package.json.
+# Needs the repository secret NPM_TOKEN (an npm automation/granular token that can publish @mafianacho/nacholens).
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (must equal package.json)"
+        required: true
+
+permissions:
+  contents: read
+  id-token: write # npm provenance
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+      - name: Check the version
+        env:
+          WANT: ${{ inputs.version }}
+        run: |
+          have=$(node -p "require('./package.json').version")
+          if [ "$have" != "$WANT" ]; then echo "package.json is $have, asked for $WANT"; exit 1; fi
+          if npm view "@mafianacho/nacholens@$have" version >/dev/null 2>&1; then echo "$have is already on npm"; exit 1; fi
+      - run: npm test
+      - name: Publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NACHOLENS_ALLOW_PUBLISH: "1"
+        run: npm publish --provenance --access public

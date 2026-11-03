@@ -1,0 +1,726 @@
+{
+  "schemaVersion": 1,
+  "product": {
+    "id": "full-stack-fastapi-template-backend",
+    "name": "FastAPI template - backend",
+    "description": "A web API (FastAPI) behind a Traefik reverse proxy that stores users and items in PostgreSQL and sends password-recovery e-mails over SMTP."
+  },
+  "source": {
+    "repo": "fastapi/full-stack-fastapi-template",
+    "commit": "f4bcfaba7c85be3c6332cc74a20819f586dcdbc6"
+  },
+  "components": [
+    {
+      "id": "client",
+      "kind": "client",
+      "label": "Web app\nbrowser",
+      "detail": "The frontend calls the backend through a generated API client (axios).",
+      "evidence": [
+        {
+          "file": "frontend/src/client/client.gen.ts",
+          "lines": [
+            16,
+            16
+          ],
+          "contains": "createClient(createConfig"
+        }
+      ]
+    },
+    {
+      "id": "gateway",
+      "kind": "gateway",
+      "label": "Traefik\nreverse proxy",
+      "detail": "Listens on port 80 and forwards requests for the host to the backend container on port 8000.",
+      "evidence": [
+        {
+          "file": "compose.yml",
+          "lines": [
+            3,
+            4
+          ],
+          "contains": "image: traefik"
+        },
+        {
+          "file": "compose.yml",
+          "lines": [
+            84,
+            85
+          ],
+          "contains": "backend-http.rule"
+        }
+      ]
+    },
+    {
+      "id": "backend",
+      "kind": "service",
+      "label": "Backend API\nFastAPI",
+      "detail": "Python API serving /api/v1: sign-in, items, password recovery. Built on FastAPI, SQLModel and Pydantic.",
+      "evidence": [
+        {
+          "file": "backend/app/main.py",
+          "lines": [
+            21,
+            25
+          ],
+          "contains": "app = FastAPI("
+        },
+        {
+          "file": "backend/pyproject.toml",
+          "lines": [
+            10,
+            10
+          ],
+          "contains": "pydantic"
+        },
+        {
+          "file": "backend/pyproject.toml",
+          "lines": [
+            16,
+            16
+          ],
+          "contains": "sqlmodel"
+        }
+      ]
+    },
+    {
+      "id": "db",
+      "kind": "datastore",
+      "label": "PostgreSQL\ndatabase",
+      "detail": "Stores users and items. The backend connects with DATABASE_URL.",
+      "evidence": [
+        {
+          "file": "compose.yml",
+          "lines": [
+            21,
+            21
+          ],
+          "contains": "postgres:18"
+        }
+      ]
+    },
+    {
+      "id": "mail",
+      "kind": "external",
+      "label": "Mail server\nSMTP (Mailpit in dev)",
+      "detail": "Receives the password-recovery e-mail. Address comes from SMTP_HOST; in local development it is a Mailpit container.",
+      "evidence": [
+        {
+          "file": "compose.override.yml",
+          "lines": [
+            71,
+            72
+          ],
+          "contains": "mailpit"
+        }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "a": "client",
+      "b": "gateway",
+      "label": "HTTP :80",
+      "evidence": [
+        {
+          "file": "compose.yml",
+          "lines": [
+            14,
+            14
+          ],
+          "contains": "entrypoints.http.address=:80"
+        }
+      ]
+    },
+    {
+      "a": "gateway",
+      "b": "backend",
+      "label": "HTTP :8000 (Docker labels)",
+      "evidence": [
+        {
+          "file": "compose.yml",
+          "lines": [
+            81,
+            81
+          ],
+          "contains": "server.port=8000"
+        }
+      ]
+    },
+    {
+      "a": "backend",
+      "b": "db",
+      "label": "PostgreSQL (psycopg)",
+      "evidence": [
+        {
+          "file": "compose.yml",
+          "lines": [
+            64,
+            64
+          ],
+          "contains": "DATABASE_URL: postgresql://"
+        },
+        {
+          "file": "backend/app/core/db.py",
+          "lines": [
+            7,
+            7
+          ],
+          "contains": "create_engine("
+        }
+      ]
+    },
+    {
+      "a": "backend",
+      "b": "mail",
+      "label": "SMTP",
+      "evidence": [
+        {
+          "file": "backend/app/utils.py",
+          "lines": [
+            47,
+            47
+          ],
+          "contains": "smtp_options = {"
+        }
+      ]
+    }
+  ],
+  "useCases": [
+    {
+      "id": "sign-in",
+      "title": "Sign in",
+      "summary": "A user sends e-mail and password and receives an access token if they are correct and active.",
+      "trigger": "POST /api/v1/login/access-token",
+      "steps": [
+        {
+          "id": "req",
+          "kind": "request",
+          "from": "client",
+          "to": "backend",
+          "label": "Send e-mail and password",
+          "narration": "The web app posts the login form to the backend; the proxy passes it on.",
+          "via": [
+            "gateway"
+          ],
+          "request": "POST /api/v1/login/access-token (e-mail, password)",
+          "evidence": [
+            {
+              "file": "backend/app/api/routes/login.py",
+              "lines": [
+                23,
+                26
+              ],
+              "contains": "login_access_token("
+            }
+          ]
+        },
+        {
+          "id": "find",
+          "kind": "call",
+          "from": "backend",
+          "to": "db",
+          "label": "Find the user by e-mail",
+          "narration": "The app looks up the account with this e-mail address.",
+          "request": "Find user by e-mail",
+          "response": "User record or nothing",
+          "evidence": [
+            {
+              "file": "backend/app/crud.py",
+              "lines": [
+                35,
+                35
+              ],
+              "contains": "select(User).where(User.email == email)"
+            }
+          ]
+        },
+        {
+          "id": "check",
+          "kind": "internal",
+          "from": "backend",
+          "to": "backend",
+          "label": "Compare the password",
+          "narration": "The typed password is compared with the stored scrambled version. If the e-mail is unknown, a fake comparison still runs so the timing does not give it away.",
+          "evidence": [
+            {
+              "file": "backend/app/crud.py",
+              "lines": [
+                50,
+                52
+              ],
+              "contains": "verify_password("
+            }
+          ]
+        },
+        {
+          "id": "gate",
+          "kind": "internal",
+          "from": "backend",
+          "to": "backend",
+          "label": "Refuse wrong or inactive accounts",
+          "narration": "A wrong e-mail/password or a deactivated account gets a 400 error and no token.",
+          "evidence": [
+            {
+              "file": "backend/app/api/routes/login.py",
+              "lines": [
+                33,
+                36
+              ],
+              "contains": "Incorrect email or password"
+            }
+          ]
+        },
+        {
+          "id": "token",
+          "kind": "internal",
+          "from": "backend",
+          "to": "backend",
+          "label": "Create the access token",
+          "narration": "A signed token is made that names the user and expires after a set time.",
+          "evidence": [
+            {
+              "file": "backend/app/core/security.py",
+              "lines": [
+                24,
+                26
+              ],
+              "contains": "jwt.encode("
+            }
+          ]
+        },
+        {
+          "id": "resp",
+          "kind": "response",
+          "from": "backend",
+          "to": "client",
+          "label": "Return the token",
+          "narration": "The token is sent back; the web app uses it for later requests.",
+          "via": [
+            "gateway"
+          ],
+          "response": "200 {access_token, token_type: bearer}",
+          "evidence": [
+            {
+              "file": "backend/app/api/routes/login.py",
+              "lines": [
+                38,
+                38
+              ],
+              "contains": "return Token("
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "create-item",
+      "title": "Create an item",
+      "summary": "A signed-in user adds a new item that belongs to them.",
+      "trigger": "POST /api/v1/items/",
+      "steps": [
+        {
+          "id": "req",
+          "kind": "request",
+          "from": "client",
+          "to": "backend",
+          "label": "Send the new item",
+          "narration": "The web app posts the item title and description with the user's token.",
+          "via": [
+            "gateway"
+          ],
+          "request": "POST /api/v1/items/ (title, description)",
+          "evidence": [
+            {
+              "file": "backend/app/api/routes/items.py",
+              "lines": [
+                61,
+                64
+              ],
+              "contains": "def create_item("
+            }
+          ]
+        },
+        {
+          "id": "ci-auth",
+          "kind": "internal",
+          "from": "backend",
+          "to": "backend",
+          "label": "Check the sign-in token",
+          "narration": "The app reads the sign-in token sent with the request and checks that it is genuine and not expired. Otherwise the request is refused.",
+          "evidence": [
+            {
+              "file": "backend/app/api/deps.py",
+              "lines": [
+                32,
+                35
+              ],
+              "contains": "jwt.decode("
+            }
+          ]
+        },
+        {
+          "id": "ci-user",
+          "kind": "call",
+          "from": "backend",
+          "to": "db",
+          "label": "Load the signed-in user",
+          "narration": "The app looks up the person the token belongs to and refuses if they are missing or deactivated.",
+          "request": "Find user by the id stored in the token",
+          "response": "The user record (active or not)",
+          "evidence": [
+            {
+              "file": "backend/app/api/deps.py",
+              "lines": [
+                41,
+                45
+              ],
+              "contains": "session.get(User, token_data.sub)"
+            }
+          ]
+        },
+        {
+          "id": "valid",
+          "kind": "internal",
+          "from": "backend",
+          "to": "backend",
+          "label": "Check the item fields",
+          "narration": "The title must be 1-255 characters and the description at most 255.",
+          "evidence": [
+            {
+              "file": "backend/app/models.py",
+              "lines": [
+                71,
+                72
+              ],
+              "contains": "min_length=1"
+            }
+          ]
+        },
+        {
+          "id": "stamp",
+          "kind": "internal",
+          "from": "backend",
+          "to": "backend",
+          "label": "Attach owner and creation time",
+          "narration": "The item is tied to the signed-in user and stamped with the current UTC time.",
+          "evidence": [
+            {
+              "file": "backend/app/models.py",
+              "lines": [
+                89,
+                89
+              ],
+              "contains": "created_at"
+            },
+            {
+              "file": "backend/app/api/routes/items.py",
+              "lines": [
+                68,
+                68
+              ],
+              "contains": "update={\"owner_id\": current_user.id}"
+            }
+          ]
+        },
+        {
+          "id": "save",
+          "kind": "call",
+          "from": "backend",
+          "to": "db",
+          "label": "Save the item",
+          "narration": "The item is written to the database and read back.",
+          "request": "Insert item",
+          "response": "Saved item with id",
+          "evidence": [
+            {
+              "file": "backend/app/api/routes/items.py",
+              "lines": [
+                69,
+                71
+              ],
+              "contains": "session.commit()"
+            }
+          ]
+        },
+        {
+          "id": "resp",
+          "kind": "response",
+          "from": "backend",
+          "to": "client",
+          "label": "Return the saved item",
+          "narration": "The new item is returned to the web app.",
+          "via": [
+            "gateway"
+          ],
+          "response": "200 item {id, title, owner_id, created_at}",
+          "evidence": [
+            {
+              "file": "backend/app/api/routes/items.py",
+              "lines": [
+                72,
+                72
+              ],
+              "contains": "return item"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "list-items",
+      "title": "List my items",
+      "summary": "A signed-in user sees their items, newest first; an administrator sees everyone's.",
+      "trigger": "GET /api/v1/items/",
+      "steps": [
+        {
+          "id": "req",
+          "kind": "request",
+          "from": "client",
+          "to": "backend",
+          "label": "Ask for the item list",
+          "narration": "The web app asks for a page of items (default 100).",
+          "via": [
+            "gateway"
+          ],
+          "request": "GET /api/v1/items/?skip=0&limit=100",
+          "evidence": [
+            {
+              "file": "backend/app/api/routes/items.py",
+              "lines": [
+                13,
+                16
+              ],
+              "contains": "def read_items("
+            }
+          ]
+        },
+        {
+          "id": "li-auth",
+          "kind": "internal",
+          "from": "backend",
+          "to": "backend",
+          "label": "Check the sign-in token",
+          "narration": "The app reads the sign-in token sent with the request and checks that it is genuine and not expired. Otherwise the request is refused.",
+          "evidence": [
+            {
+              "file": "backend/app/api/deps.py",
+              "lines": [
+                32,
+                35
+              ],
+              "contains": "jwt.decode("
+            }
+          ]
+        },
+        {
+          "id": "li-user",
+          "kind": "call",
+          "from": "backend",
+          "to": "db",
+          "label": "Load the signed-in user",
+          "narration": "The app looks up the person the token belongs to and refuses if they are missing or deactivated.",
+          "request": "Find user by the id stored in the token",
+          "response": "The user record (active or not)",
+          "evidence": [
+            {
+              "file": "backend/app/api/deps.py",
+              "lines": [
+                41,
+                45
+              ],
+              "contains": "session.get(User, token_data.sub)"
+            }
+          ]
+        },
+        {
+          "id": "scope",
+          "kind": "internal",
+          "from": "backend",
+          "to": "backend",
+          "label": "Decide whose items to show",
+          "narration": "Administrators get every item; everyone else only their own.",
+          "evidence": [
+            {
+              "file": "backend/app/api/routes/items.py",
+              "lines": [
+                21,
+                21
+              ],
+              "contains": "if current_user.is_superuser"
+            }
+          ]
+        },
+        {
+          "id": "fetch",
+          "kind": "call",
+          "from": "backend",
+          "to": "db",
+          "label": "Fetch items, newest first",
+          "narration": "The database is asked for the count and for the page of items ordered by creation time, latest first.",
+          "request": "Count + select items ordered by created_at desc",
+          "response": "Items and total count",
+          "evidence": [
+            {
+              "file": "backend/app/api/routes/items.py",
+              "lines": [
+                37,
+                40
+              ],
+              "contains": "order_by(col(Item.created_at).desc())"
+            }
+          ]
+        },
+        {
+          "id": "resp",
+          "kind": "response",
+          "from": "backend",
+          "to": "client",
+          "label": "Return the list",
+          "narration": "The items and the total count are sent back.",
+          "via": [
+            "gateway"
+          ],
+          "response": "200 {data: [items], count}",
+          "evidence": [
+            {
+              "file": "backend/app/api/routes/items.py",
+              "lines": [
+                45,
+                45
+              ],
+              "contains": "return ItemsPublic("
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "password-recovery",
+      "title": "Recover a password by e-mail",
+      "summary": "A user asks for a reset link; if the account exists an e-mail is sent. The reply is the same either way.",
+      "trigger": "POST /api/v1/password-recovery/{email}",
+      "steps": [
+        {
+          "id": "req",
+          "kind": "request",
+          "from": "client",
+          "to": "backend",
+          "label": "Ask for a reset link",
+          "narration": "The web app sends the e-mail address that forgot its password.",
+          "via": [
+            "gateway"
+          ],
+          "request": "POST /api/v1/password-recovery/<email>",
+          "evidence": [
+            {
+              "file": "backend/app/api/routes/login.py",
+              "lines": [
+                53,
+                54
+              ],
+              "contains": "def recover_password("
+            }
+          ]
+        },
+        {
+          "id": "find",
+          "kind": "call",
+          "from": "backend",
+          "to": "db",
+          "label": "Look up the account",
+          "narration": "The app checks whether an account with this e-mail exists.",
+          "request": "Find user by e-mail",
+          "response": "User or nothing",
+          "evidence": [
+            {
+              "file": "backend/app/api/routes/login.py",
+              "lines": [
+                58,
+                58
+              ],
+              "contains": "crud.get_user_by_email("
+            }
+          ]
+        },
+        {
+          "id": "decide",
+          "kind": "internal",
+          "from": "backend",
+          "to": "backend",
+          "label": "Send only if the account exists",
+          "narration": "The e-mail is sent only when the account exists, but the answer is identical in both cases so nobody can probe which addresses are registered.",
+          "evidence": [
+            {
+              "file": "backend/app/api/routes/login.py",
+              "lines": [
+                60,
+                62
+              ],
+              "contains": "if user:"
+            }
+          ]
+        },
+        {
+          "id": "token",
+          "kind": "internal",
+          "from": "backend",
+          "to": "backend",
+          "label": "Make a time-limited reset token",
+          "narration": "A signed token containing the e-mail and an expiry time is created and put in a link to the web app.",
+          "evidence": [
+            {
+              "file": "backend/app/utils.py",
+              "lines": [
+                110,
+                114
+              ],
+              "contains": "jwt.encode("
+            }
+          ]
+        },
+        {
+          "id": "mail",
+          "kind": "call",
+          "from": "backend",
+          "to": "mail",
+          "label": "Send the e-mail",
+          "narration": "The reset e-mail is handed to the mail server.",
+          "request": "E-mail with reset link",
+          "response": "Mail server accepts it",
+          "evidence": [
+            {
+              "file": "backend/app/utils.py",
+              "lines": [
+                56,
+                56
+              ],
+              "contains": "message.send(to=email_to"
+            }
+          ]
+        },
+        {
+          "id": "resp",
+          "kind": "response",
+          "from": "backend",
+          "to": "client",
+          "label": "Always the same answer",
+          "narration": "The reply says a link was sent if the address is registered, whether or not it was.",
+          "via": [
+            "gateway"
+          ],
+          "response": "200 {message: ...}",
+          "evidence": [
+            {
+              "file": "backend/app/api/routes/login.py",
+              "lines": [
+                72,
+                74
+              ],
+              "contains": "If that email is registered"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

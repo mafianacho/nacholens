@@ -1,0 +1,16 @@
+{
+  "title": "Order list shows shipping status",
+  "summary": "The order list now asks the shipping tracker for the status of each order and shows it next to the order. Creating an order also generates a tracking code. (Hand-written example of the change-metadata format; nacholens diff produces the same shape automatically.)",
+  "ref": "demo/shop v1 → v2 (api.js, public/app.js)",
+  "components": [
+    { "id": "api", "change": "modified", "note": "New trackShipping() calls the tracker for every order that has a tracking code; new orders get a TRK- code." },
+    { "id": "browser", "change": "modified", "note": "The list renders a readable shipping status per order." },
+    { "id": "shipping", "change": "added", "note": "New third-party dependency: GET /track per order." }
+  ],
+  "steps": [
+    { "useCase": "list-orders", "step": "shipping", "change": "added", "note": "New call: one tracker lookup per order with a tracking code, run in parallel. A failure degrades to \"unknown\"." },
+    { "useCase": "list-orders", "step": "shape", "change": "modified", "note": "Each order now carries a shipping field." },
+    { "useCase": "list-orders", "step": "response", "change": "modified", "note": "The page prints the status next to each order." },
+    { "useCase": "place-order", "step": "insert", "change": "modified", "note": "The inserted row includes a generated tracking code." }
+  ]
+}

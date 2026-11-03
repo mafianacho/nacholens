@@ -1,0 +1,145 @@
+{
+  "title": "Added GET,PUT and DELETE Endpoints",
+  "summary": "Generated from git diff: 17 changed steps, 2 changed components (client, server), 2 changed files outside the model, 0 ignored files.",
+  "ref": "ashankgupta/students-api-go eb277ac..e5ffad4",
+  "components": [
+    {
+      "id": "client",
+      "change": "modified",
+      "note": "End of a changed step: add-student/req"
+    },
+    {
+      "id": "server",
+      "change": "modified",
+      "note": "Component evidence code changed: internal/http/handlers/student/student.go:20-31"
+    }
+  ],
+  "steps": [
+    {
+      "useCase": "add-student",
+      "step": "req",
+      "change": "modified",
+      "note": "Evidence code changed: internal/http/handlers/student/student.go:21-22"
+    },
+    {
+      "useCase": "add-student",
+      "step": "read",
+      "change": "modified",
+      "note": "Evidence code changed: internal/http/handlers/student/student.go:39-47"
+    },
+    {
+      "useCase": "add-student",
+      "step": "validate",
+      "change": "modified",
+      "note": "Evidence code changed: internal/http/handlers/student/student.go:49-53"
+    },
+    {
+      "useCase": "add-student",
+      "step": "insert",
+      "change": "modified",
+      "note": "Evidence code changed: internal/http/handlers/student/student.go:55"
+    },
+    {
+      "useCase": "add-student",
+      "step": "done",
+      "change": "modified",
+      "note": "Evidence code changed: internal/http/handlers/student/student.go:62"
+    },
+    {
+      "useCase": "list-students",
+      "step": "req",
+      "change": "added",
+      "note": "Evidence code added: internal/http/handlers/student/student.go:23-24"
+    },
+    {
+      "useCase": "list-students",
+      "step": "select",
+      "change": "modified",
+      "note": "Evidence code changed: internal/http/handlers/student/student.go:68, internal/storage/sqlite/sqlite.go:67"
+    },
+    {
+      "useCase": "list-students",
+      "step": "shape",
+      "change": "added",
+      "note": "Evidence code added: internal/storage/sqlite/sqlite.go:79-88"
+    },
+    {
+      "useCase": "list-students",
+      "step": "done",
+      "change": "modified",
+      "note": "Evidence code changed: internal/http/handlers/student/student.go:73"
+    },
+    {
+      "useCase": "update-student",
+      "step": "req",
+      "change": "added",
+      "note": "Evidence code added: internal/http/handlers/student/student.go:25-26"
+    },
+    {
+      "useCase": "update-student",
+      "step": "check",
+      "change": "modified",
+      "note": "Evidence code changed: internal/http/handlers/student/student.go:80-84"
+    },
+    {
+      "useCase": "update-student",
+      "step": "update",
+      "change": "modified",
+      "note": "Evidence code changed: internal/http/handlers/student/student.go:86, internal/storage/sqlite/sqlite.go:95"
+    },
+    {
+      "useCase": "update-student",
+      "step": "done",
+      "change": "modified",
+      "note": "Evidence code changed: internal/http/handlers/student/student.go:91"
+    },
+    {
+      "useCase": "delete-student",
+      "step": "req",
+      "change": "added",
+      "note": "Evidence code added: internal/http/handlers/student/student.go:27-28"
+    },
+    {
+      "useCase": "delete-student",
+      "step": "check",
+      "change": "modified",
+      "note": "Evidence code changed: internal/http/handlers/student/student.go:97-102"
+    },
+    {
+      "useCase": "delete-student",
+      "step": "delete",
+      "change": "modified",
+      "note": "Evidence code changed: internal/http/handlers/student/student.go:104, internal/storage/sqlite/sqlite.go:100"
+    },
+    {
+      "useCase": "delete-student",
+      "step": "done",
+      "change": "added",
+      "note": "Evidence code added: internal/http/handlers/student/student.go:109"
+    }
+  ],
+  "unmapped": [
+    {
+      "file": "internal/storage/storage.go",
+      "category": "code",
+      "status": "modified",
+      "lines": "3-4, 6-9, 11-12 (3 hunks)",
+      "hint": "Not in the evidence of any use-case step: add the path to the model, or confirm the change is unrelated"
+    },
+    {
+      "file": "internal/types/types.go",
+      "category": "code",
+      "status": "modified",
+      "lines": "4-7, 9-10 (2 hunks)",
+      "hint": "Not in the evidence of any use-case step: add the path to the model, or confirm the change is unrelated"
+    }
+  ],
+  "ignored": [],
+  "generated": {
+    "by": "nacholens diff",
+    "base": "eb277ac541b001aae2dbd0ba829c7ef3f976f0c6",
+    "head": "e5ffad4fb3d46a7f337810fa55df72e53bcaa739",
+    "modelCommit": "6a339a28eaacf660a9425ce5efe57011b9977bad",
+    "lineTranslation": true
+  }
+}

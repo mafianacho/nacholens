@@ -1,0 +1,121 @@
+{
+  "title": "show shipping status on the order list",
+  "summary": "Generated from git diff: 4 changed steps, 3 changed components (browser, api, shipping), 2 changed files outside the model, 1 ignored files.",
+  "ref": "demo/shop (built by nacholens demo) 030bf9c..e9f3087",
+  "components": [
+    {
+      "id": "browser",
+      "change": "modified",
+      "note": "End of a changed step: list-orders/response"
+    },
+    {
+      "id": "api",
+      "change": "modified",
+      "note": "End of a changed step: list-orders/shipping"
+    },
+    {
+      "id": "shipping",
+      "change": "added",
+      "note": "Component evidence code changed: api.js:12"
+    }
+  ],
+  "steps": [
+    {
+      "useCase": "list-orders",
+      "step": "shipping",
+      "change": "added",
+      "note": "Evidence code added: api.js:12-18"
+    },
+    {
+      "useCase": "list-orders",
+      "step": "shape",
+      "change": "modified",
+      "note": "Evidence code changed: api.js:65"
+    },
+    {
+      "useCase": "list-orders",
+      "step": "response",
+      "change": "modified",
+      "note": "Evidence code changed: api.js:65, public/app.js:16"
+    },
+    {
+      "useCase": "place-order",
+      "step": "insert",
+      "change": "modified",
+      "note": "Evidence code changed: api.js:73"
+    }
+  ],
+  "details": [
+    {
+      "component": "api",
+      "kind": "part",
+      "id": "track",
+      "change": "added",
+      "note": "Evidence code added: api.js:12-18"
+    },
+    {
+      "component": "api",
+      "kind": "wire",
+      "id": "session>orders-post",
+      "change": "modified",
+      "note": "Evidence code changed: api.js:73"
+    },
+    {
+      "component": "api",
+      "kind": "wire",
+      "id": "orders-get>track",
+      "change": "modified",
+      "note": "Evidence code changed: api.js:64"
+    },
+    {
+      "component": "api",
+      "kind": "wire",
+      "id": "track>fetch-ext",
+      "change": "added",
+      "note": "Evidence code added: api.js:15"
+    },
+    {
+      "component": "api",
+      "kind": "wire",
+      "id": "orders-post>db-module",
+      "change": "modified",
+      "note": "Evidence code changed: api.js:73"
+    },
+    {
+      "component": "shipping",
+      "kind": "endpoint",
+      "id": "track",
+      "change": "modified",
+      "note": "Evidence code changed: api.js:15-16"
+    }
+  ],
+  "unmapped": [
+    {
+      "file": "public/format.js",
+      "category": "code",
+      "status": "modified",
+      "lines": "3 (1 hunk)",
+      "hint": "Not in the evidence of any use-case step: add the path to the model, or confirm the change is unrelated"
+    },
+    {
+      "file": "public/styles.css",
+      "category": "style",
+      "status": "modified",
+      "lines": "5 (1 hunk)",
+      "hint": "Not in the evidence of any use-case step: add the path to the model, or confirm the change is unrelated"
+    }
+  ],
+  "ignored": [
+    {
+      "file": "README.md",
+      "reason": "docs"
+    }
+  ],
+  "generated": {
+    "by": "nacholens diff",
+    "base": "030bf9c56ec32a5a14c831cc73c8915a1b0a1eba",
+    "head": "e9f308776fd0d64ac269e02a5581415c2dfabf43",
+    "modelCommit": "e9f308776fd0d64ac269e02a5581415c2dfabf43",
+    "lineTranslation": false
+  }
+}

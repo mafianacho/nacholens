@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="{{LANG}}" data-target="{{TARGET}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="generator" content="nacholens">
+<meta name="nacholens-target" content="{{TARGET}}">
+<title>{{TITLE}}</title>
+<style>
+{{FONTS}}
+</style>
+<style>
+{{CSS}}
+</style>
+<style>
+{{REVIEWCSS}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="topbar">
+    <div class="brand"><span class="logo" aria-hidden="true">N</span>nacholens</div>
+    <span class="sep" aria-hidden="true"></span>
+    <h1 class="product" id="sv-product"></h1>
+    <span class="ref" id="sv-ref" hidden></span>
+    <span class="commit ell" id="sv-commit"></span>
+    <span class="grow"></span>
+    <button class="switch" id="sv-overlay" type="button" role="switch" aria-checked="true" hidden><span class="track" aria-hidden="true"></span>{{UOVERLAY}}</button>
+  </header>
+  <div class="body" id="sv-body">
+    <nav class="side" aria-label="{{UNAV}}">
+      <div class="side-tools">
+        <label class="search"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="sv-q" type="search" placeholder="{{USEARCH}}" aria-label="{{USEARCH}}"></label>
+      </div>
+      <div class="side-list" id="sv-list"></div>
+    </nav>
+    <section class="stage" id="sv-stage" aria-label="{{USTAGE}}">
+      <div class="crumbs" id="sv-crumbs" hidden></div>
+      <div class="caption" id="sv-caption" aria-live="polite"></div>
+      <svg class="canvas" id="sv-canvas" role="img" aria-label="{{UCANVAS}}"></svg>
+    </section>
+    <div class="transport" id="sv-transport" role="group" aria-label="{{UTRANSPORT}}"></div>
+    <section id="sv-review" class="dock" hidden aria-label="{{UREVIEW}}"></section>
+    <aside class="insp" id="sv-insp" aria-label="{{UINSP}}"></aside>
+  </div>
+  <footer class="foot" id="sv-foot"><a href="https://mafianacho.com" target="_blank" rel="noopener noreferrer">Made by Mafianacho Inc.</a></footer>
+</div>
+<script type="application/json" id="sv-model">{{MODEL}}</script>
+<script type="application/json" id="sv-changes">{{CHANGES}}</script>
+<script type="application/json" id="sv-review-data">{{REVIEW}}</script>
+<script>
+{{JS}}
+</script>
+<script>
+{{REVIEWJS}}
+</script>
+</body>
+</html>

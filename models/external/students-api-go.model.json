@@ -1,0 +1,498 @@
+{
+  "schemaVersion": 1,
+  "product": {
+    "id": "students-api-go",
+    "name": "Students API",
+    "description": "A small student-records service: a caller adds, lists, updates and deletes students, and the service keeps them in a local SQLite file."
+  },
+  "source": {
+    "repo": "ashankgupta/students-api-go",
+    "commit": "6a339a28eaacf660a9425ce5efe57011b9977bad"
+  },
+  "components": [
+    {
+      "id": "client",
+      "kind": "client",
+      "label": "Caller\nany HTTP client",
+      "detail": "Whoever calls the API (curl, a web page, another service). No client code exists in this repo; it is the party that sends requests to the /api/students address.",
+      "evidence": [
+        {
+          "file": "cmd/students-api/main.go",
+          "lines": [
+            32,
+            32
+          ],
+          "contains": "POST /api/students"
+        }
+      ]
+    },
+    {
+      "id": "server",
+      "kind": "service",
+      "label": "Students API\nGo web server",
+      "detail": "A Go net/http server that registers the students address and hands each request to one handler, which looks at the HTTP method and runs the matching action.",
+      "evidence": [
+        {
+          "file": "cmd/students-api/main.go",
+          "lines": [
+            32,
+            32
+          ],
+          "contains": "router.HandleFunc"
+        },
+        {
+          "file": "internal/http/handlers/student/student.go",
+          "lines": [
+            20,
+            31
+          ],
+          "contains": "switch r.Method"
+        }
+      ]
+    },
+    {
+      "id": "db",
+      "kind": "datastore",
+      "label": "SQLite\nstudents table",
+      "detail": "A local SQLite database file (path from the config file) holding one table, students, with id, name, email and age.",
+      "evidence": [
+        {
+          "file": "internal/storage/sqlite/sqlite.go",
+          "lines": [
+            18,
+            18
+          ],
+          "contains": "sql.Open(\"sqlite3\""
+        }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "a": "client",
+      "b": "server",
+      "label": "HTTP /api/students",
+      "evidence": [
+        {
+          "file": "cmd/students-api/main.go",
+          "lines": [
+            34,
+            37
+          ],
+          "contains": "http.Server"
+        }
+      ]
+    },
+    {
+      "a": "server",
+      "b": "db",
+      "label": "SQL via database/sql",
+      "evidence": [
+        {
+          "file": "cmd/students-api/main.go",
+          "lines": [
+            22,
+            22
+          ],
+          "contains": "sqlite.New(cfg)"
+        }
+      ]
+    }
+  ],
+  "useCases": [
+    {
+      "id": "add-student",
+      "title": "Add a student",
+      "summary": "A caller sends name, email and age; the service checks them and stores a new student.",
+      "trigger": "POST /api/students",
+      "steps": [
+        {
+          "id": "req",
+          "kind": "request",
+          "from": "client",
+          "to": "server",
+          "label": "Send the new student",
+          "narration": "The caller posts a student's details to the students address. The server sees it is a 'create' request.",
+          "evidence": [
+            {
+              "file": "cmd/students-api/main.go",
+              "lines": [
+                32,
+                32
+              ],
+              "contains": "POST /api/students"
+            },
+            {
+              "file": "internal/http/handlers/student/student.go",
+              "lines": [
+                21,
+                22
+              ],
+              "contains": "case http.MethodPost"
+            }
+          ],
+          "request": "POST /api/students {name, email, age}"
+        },
+        {
+          "id": "read",
+          "kind": "internal",
+          "from": "server",
+          "to": "server",
+          "label": "Read the request body",
+          "narration": "The server reads the details sent. An empty or unreadable body is turned away with a 400 error.",
+          "evidence": [
+            {
+              "file": "internal/http/handlers/student/student.go",
+              "lines": [
+                39,
+                47
+              ],
+              "contains": "json.NewDecoder(r.Body).Decode(&student)"
+            }
+          ]
+        },
+        {
+          "id": "validate",
+          "kind": "internal",
+          "from": "server",
+          "to": "server",
+          "label": "Check required fields",
+          "narration": "Name, email and age must all be filled in; otherwise the server answers 400 and says which field is missing.",
+          "evidence": [
+            {
+              "file": "internal/http/handlers/student/student.go",
+              "lines": [
+                49,
+                53
+              ],
+              "contains": "validator.New().Struct(student)"
+            }
+          ]
+        },
+        {
+          "id": "insert",
+          "kind": "call",
+          "from": "server",
+          "to": "db",
+          "label": "Save the student",
+          "narration": "The server asks the database to insert a new row and receives the new student's number.",
+          "evidence": [
+            {
+              "file": "internal/http/handlers/student/student.go",
+              "lines": [
+                55,
+                55
+              ],
+              "contains": "storage.CreateStudent"
+            },
+            {
+              "file": "internal/storage/sqlite/sqlite.go",
+              "lines": [
+                43,
+                43
+              ],
+              "contains": "INSERT INTO students"
+            }
+          ],
+          "request": "INSERT name, email, age",
+          "response": "new row id"
+        },
+        {
+          "id": "done",
+          "kind": "response",
+          "from": "server",
+          "to": "client",
+          "label": "Reply: created",
+          "narration": "The server answers 201 Created with the new student's id.",
+          "evidence": [
+            {
+              "file": "internal/http/handlers/student/student.go",
+              "lines": [
+                62,
+                62
+              ],
+              "contains": "http.StatusCreated"
+            }
+          ],
+          "response": "201 {id}"
+        }
+      ]
+    },
+    {
+      "id": "list-students",
+      "title": "List all students",
+      "summary": "A caller asks for everyone and gets back the full list.",
+      "trigger": "GET /api/students",
+      "steps": [
+        {
+          "id": "req",
+          "kind": "request",
+          "from": "client",
+          "to": "server",
+          "label": "Ask for the list",
+          "narration": "The caller sends a read request to the students address. The server sees it is a 'list' request.",
+          "evidence": [
+            {
+              "file": "internal/http/handlers/student/student.go",
+              "lines": [
+                23,
+                24
+              ],
+              "contains": "case http.MethodGet"
+            }
+          ],
+          "request": "GET /api/students"
+        },
+        {
+          "id": "select",
+          "kind": "call",
+          "from": "server",
+          "to": "db",
+          "label": "Read every student",
+          "narration": "The server asks the database for all students (id, name, email, age).",
+          "evidence": [
+            {
+              "file": "internal/http/handlers/student/student.go",
+              "lines": [
+                68,
+                68
+              ],
+              "contains": "storage.GetAllStudents"
+            },
+            {
+              "file": "internal/storage/sqlite/sqlite.go",
+              "lines": [
+                67,
+                67
+              ],
+              "contains": "SELECT id, name, email, age FROM students"
+            }
+          ],
+          "request": "SELECT all rows",
+          "response": "rows"
+        },
+        {
+          "id": "shape",
+          "kind": "internal",
+          "from": "server",
+          "to": "server",
+          "label": "Turn rows into a list",
+          "narration": "Each database row is converted into a small record with id, name, email and age.",
+          "evidence": [
+            {
+              "file": "internal/storage/sqlite/sqlite.go",
+              "lines": [
+                79,
+                88
+              ],
+              "contains": "rows.Scan"
+            }
+          ]
+        },
+        {
+          "id": "done",
+          "kind": "response",
+          "from": "server",
+          "to": "client",
+          "label": "Reply with the list",
+          "narration": "The server answers 200 with the list of students. If the database fails it answers 500 with an error message.",
+          "evidence": [
+            {
+              "file": "internal/http/handlers/student/student.go",
+              "lines": [
+                73,
+                73
+              ],
+              "contains": "http.StatusOK, students"
+            }
+          ],
+          "response": "200 [students]"
+        }
+      ]
+    },
+    {
+      "id": "update-student",
+      "title": "Update a student",
+      "summary": "A caller sends a student including its id and the stored details are overwritten.",
+      "trigger": "PUT /api/students",
+      "steps": [
+        {
+          "id": "req",
+          "kind": "request",
+          "from": "client",
+          "to": "server",
+          "label": "Send the changed student",
+          "narration": "The caller sends the student with its id and the new details. The server sees it is an 'update' request.",
+          "evidence": [
+            {
+              "file": "internal/http/handlers/student/student.go",
+              "lines": [
+                25,
+                26
+              ],
+              "contains": "case http.MethodPut"
+            }
+          ],
+          "request": "PUT /api/students {id, name, email, age}"
+        },
+        {
+          "id": "check",
+          "kind": "internal",
+          "from": "server",
+          "to": "server",
+          "label": "Check the body and id",
+          "narration": "If the body cannot be read or the id is missing/zero, the server answers 400 'Invalid input'. Unlike adding, name/email/age are not checked as required here.",
+          "evidence": [
+            {
+              "file": "internal/http/handlers/student/student.go",
+              "lines": [
+                80,
+                84
+              ],
+              "contains": "student.Id == 0"
+            }
+          ]
+        },
+        {
+          "id": "update",
+          "kind": "call",
+          "from": "server",
+          "to": "db",
+          "label": "Overwrite the student",
+          "narration": "The server asks the database to replace name, email and age of the student with that id.",
+          "evidence": [
+            {
+              "file": "internal/http/handlers/student/student.go",
+              "lines": [
+                86,
+                86
+              ],
+              "contains": "storage.UpdateStudent"
+            },
+            {
+              "file": "internal/storage/sqlite/sqlite.go",
+              "lines": [
+                95,
+                95
+              ],
+              "contains": "UPDATE students SET"
+            }
+          ],
+          "request": "UPDATE name, email, age WHERE id",
+          "response": "ok or error"
+        },
+        {
+          "id": "done",
+          "kind": "response",
+          "from": "server",
+          "to": "client",
+          "label": "Reply: updated",
+          "narration": "The server answers 200 with the message 'Student updated' (or 500 if the database fails).",
+          "evidence": [
+            {
+              "file": "internal/http/handlers/student/student.go",
+              "lines": [
+                91,
+                91
+              ],
+              "contains": "Student updated"
+            }
+          ],
+          "response": "200 {message}"
+        }
+      ]
+    },
+    {
+      "id": "delete-student",
+      "title": "Delete a student",
+      "summary": "A caller names a student id in the address and that student is removed.",
+      "trigger": "DELETE /api/students?id=<id>",
+      "steps": [
+        {
+          "id": "req",
+          "kind": "request",
+          "from": "client",
+          "to": "server",
+          "label": "Send the delete request",
+          "narration": "The caller sends a delete request with the student's id in the address. The server sees it is a 'delete' request.",
+          "evidence": [
+            {
+              "file": "internal/http/handlers/student/student.go",
+              "lines": [
+                27,
+                28
+              ],
+              "contains": "case http.MethodDelete"
+            }
+          ],
+          "request": "DELETE /api/students?id=7"
+        },
+        {
+          "id": "check",
+          "kind": "internal",
+          "from": "server",
+          "to": "server",
+          "label": "Read and check the id",
+          "narration": "The id is taken from the address and must be a non-zero number; otherwise the server answers 400 'Invalid ID'.",
+          "evidence": [
+            {
+              "file": "internal/http/handlers/student/student.go",
+              "lines": [
+                97,
+                102
+              ],
+              "contains": "strconv.ParseInt"
+            }
+          ]
+        },
+        {
+          "id": "delete",
+          "kind": "call",
+          "from": "server",
+          "to": "db",
+          "label": "Remove the student",
+          "narration": "The server asks the database to delete the row with that id.",
+          "evidence": [
+            {
+              "file": "internal/http/handlers/student/student.go",
+              "lines": [
+                104,
+                104
+              ],
+              "contains": "storage.DeleteStudent"
+            },
+            {
+              "file": "internal/storage/sqlite/sqlite.go",
+              "lines": [
+                100,
+                100
+              ],
+              "contains": "DELETE FROM students"
+            }
+          ],
+          "request": "DELETE WHERE id",
+          "response": "ok or error"
+        },
+        {
+          "id": "done",
+          "kind": "response",
+          "from": "server",
+          "to": "client",
+          "label": "Reply: deleted",
+          "narration": "The server answers 200 with the message 'Student deleted' (or 500 if the database fails).",
+          "evidence": [
+            {
+              "file": "internal/http/handlers/student/student.go",
+              "lines": [
+                109,
+                109
+              ],
+              "contains": "Student deleted"
+            }
+          ],
+          "response": "200 {message}"
+        }
+      ]
+    }
+  ]
+}

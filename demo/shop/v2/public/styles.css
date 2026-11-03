@@ -1,0 +1,5 @@
+body { font: 15px/1.5 system-ui, sans-serif; margin: 0 auto; max-width: 640px; padding: 24px; }
+header { display: flex; justify-content: space-between; align-items: baseline; }
+#orders { list-style: none; padding: 0; }
+#orders li { padding: 6px 0; border-bottom: 1px solid #ddd; }
+#orders li small { color: #666; }

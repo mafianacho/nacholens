@@ -1,0 +1,62 @@
+{
+  "name": "@mafianacho/nacholens",
+  "version": "0.3.0",
+  "description": "See what an AI changed in a backend without reading code: use-case flow animation with a change overlay derived from git diff. Zero dependencies.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "nacholens": "./src/cli.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "src",
+    "skills",
+    "demo",
+    "models/demo-shop/model.json",
+    "models/demo-shop/changes.example.json",
+    "models/demo-shop/changes.auto.json",
+    "models/demo-shop/intent.example.json",
+    "examples",
+    "docs/guide.md",
+    "docs/guide.ko.md",
+    "docs/model-schema.md",
+    "docs/review.md",
+    "LICENSE",
+    "NOTICE",
+    "README.md",
+    "README.ja.md",
+    "README.de.md",
+    "README.fr.md",
+    "README.zh.md",
+    "README.ko.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mafianacho/nacholens.git"
+  },
+  "homepage": "https://github.com/mafianacho/nacholens#readme",
+  "bugs": {
+    "url": "https://github.com/mafianacho/nacholens/issues"
+  },
+  "keywords": [
+    "architecture",
+    "visualization",
+    "code-review",
+    "ai",
+    "agent-skill",
+    "git-diff",
+    "backend"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "validate": "node src/cli.js validate models/demo-shop/model.json --changes models/demo-shop/changes.auto.json",
+    "demo": "node src/cli.js demo --out nacholens-demo",
+    "build:examples": "node src/cli.js build models/demo-shop/model.json --changes models/demo-shop/changes.auto.json --intent models/demo-shop/intent.example.json --format both --out examples",
+    "prepublishOnly": "node -e \"if(process.env.NACHOLENS_ALLOW_PUBLISH!=='1'){console.error('Publishing is blocked: set NACHOLENS_ALLOW_PUBLISH=1 only after the owner approved the release.');process.exit(1)}\" && npm test"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "identifier": "nacholens-demo-shop",
+  "title": "Demo shop · Nacholens",
+  "type": "text/html",
+  "file": "demo-shop.artifact.html",
+  "note": "Paste or upload as a Claude artifact (HTML) as is. No external resources."
+}

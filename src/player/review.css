@@ -1,0 +1,49 @@
+/* Review dock (below the stage). Tokens and shared components (badge, check, seg, link, steplink, empty) come from player.css. */
+.dock { display: flex; flex-direction: column; min-height: 0; min-width: 0; border-top: 1px solid var(--border); background: var(--surface); position: relative; }
+.dock.collapsed { height: auto; }
+.dock.collapsed .grip { display: none; }
+.grip { height: 7px; margin-top: -4px; cursor: row-resize; position: relative; z-index: 3; flex: none; }
+.grip::after { content: ""; position: absolute; left: 50%; top: 2px; width: 36px; height: 3px; margin-left: -18px; border-radius: 2px; background: var(--border-strong); opacity: 0; transition: opacity var(--t-fast); }
+.grip:hover::after { opacity: 1; }
+.dtabs { display: flex; align-items: stretch; gap: 2px; padding: 0 var(--s2) 0 var(--s3); border-bottom: 1px solid var(--border); flex: none; overflow-x: auto; }
+.dock.collapsed .dtabs { border-bottom: 0; }
+.dtabs .grow { flex: 1; }
+.dtabs .fold { align-self: center; }
+.dtabs .fold svg.i { transition: transform var(--t-base) var(--ease-out); }
+.dock.collapsed .dtabs .fold svg.i { transform: rotate(180deg); }
+.dtab { display: inline-flex; align-items: center; gap: var(--s2); height: 44px; padding: 0 var(--s3); border: 0; background: none; color: var(--text-2); font-weight: 500; position: relative; white-space: nowrap; transition: color var(--t-fast); }
+.dtab:hover { color: var(--text); }
+.dtab[aria-selected="true"] { color: var(--text); font-weight: 600; }
+.dtab[aria-selected="true"]::after { content: ""; position: absolute; left: var(--s3); right: var(--s3); bottom: -1px; height: 2px; border-radius: 2px; background: var(--accent-line); }
+.dtab .role { font-size: 11px; font-weight: 600; color: var(--text-3); padding: 0 5px; border: 1px solid var(--border); height: 18px; display: inline-flex; align-items: center; border-radius: var(--r-sm); background: var(--sunken); }
+.dtab .left { font-size: var(--fs-xs); font-weight: 700; color: var(--t); font-variant-numeric: tabular-nums; }
+.dtab .left.none { color: var(--text-4); font-weight: 600; }
+.dtab .ok { color: var(--success); display: inline-flex; }
+.dbody { flex: 1; min-height: 0; overflow: auto; }
+.dhead { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s1) var(--s3); padding: var(--s3) var(--s4) var(--s2); }
+.dhead .q { font-weight: 600; }
+.dhead .sub { font-size: var(--fs-sm); color: var(--text-3); }
+.dhead .grow { flex: 1; }
+.rowlist { list-style: none; margin: 0; padding: 0 var(--s2) var(--s3); }
+.ri { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s2); border-radius: var(--r-md); transition: background var(--t-fast); }
+.ri:hover { background: var(--hover); }
+.ri .check { margin-top: 1px; }
+.ri .gap { width: 18px; flex: none; }
+.ri .main { flex: 1; min-width: 0; }
+.ri .main.small { font-size: var(--fs-sm); }
+.ri .t { font-weight: 500; }
+.ri .t.mono { font-size: 13px; }
+.ri .m { font-size: var(--fs-xs); color: var(--text-3); margin-top: 1px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+.ri .end { display: flex; gap: 6px; align-items: center; flex: none; }
+.ri.done .t { color: var(--text-3); text-decoration: line-through; text-decoration-color: var(--text-4); }
+.ri .link.plain { color: inherit; font-weight: 500; text-align: left; }
+.chev { border: 0; background: none; padding: 2px; color: var(--text-3); border-radius: var(--r-sm); display: inline-flex; }
+.chev svg.i { transition: transform var(--t-base) var(--ease-out); }
+.chev[aria-expanded="true"] svg.i { transform: rotate(180deg); }
+.files { list-style: none; margin: 6px 0 0; padding: 0; font-family: var(--mono); font-size: 12px; color: var(--text-2); }
+.files li { display: flex; gap: var(--s2); padding: 2px 0; }
+.files li span:first-child { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.files .ln, .files .st { color: var(--text-4); flex: none; }
+.subhead { display: flex; align-items: center; gap: var(--s2); padding: var(--s3) var(--s4) var(--s1); font-size: var(--fs-xs); font-weight: 600; color: var(--text-3); }
+.subhead .link { font-size: var(--fs-xs); }
+@media (max-width: 1100px) { .dock { height: auto; max-height: 70vh; } }

@@ -1,0 +1,13 @@
+nacholens
+Copyright 2026 Mafianacho
+
+This product includes no third-party code, icons or images.
+
+It includes fonts licensed under the SIL Open Font License, Version 1.1 (not under Apache-2.0), in
+src/player/fonts/, embedded into every generated page:
+  - Nacho Sans, Nacho Mono: Modified Versions (subset, WOFF2, renamed) of IBM Plex Sans and IBM Plex Mono,
+    Copyright 2017 IBM Corp. with Reserved Font Name "Plex". See src/player/fonts/OFL-IBMPlex.txt.
+  - Anton (subset, WOFF2): Copyright 2020 The Anton Project Authors. See src/player/fonts/OFL-Anton.txt.
+Details and source checksums: src/player/fonts/FONTLOG.md. The look follows the Nacho Combo design system
+(https://github.com/mafianacho/nachocombo). The player needs no network access.
+(The Apache-2.0 license text in LICENSE is the unmodified text from apache.org.)
