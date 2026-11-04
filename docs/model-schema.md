@@ -40,6 +40,22 @@ Step kinds: `request` one way in · `response` one way out · `call` a round tri
 
 Validation rejects: items without evidence, links or steps over undeclared links, duplicate ids, unknown kinds or keys, absolute or `..` paths, `call` steps without a response summary, leftover `TODO`s from the template.
 
+## Optional `depth` (collection depth)
+
+```jsonc
+{ "schemaVersion": 1, "depth": "diff | brief | full", ... }
+```
+
+`depth` says how much of the repository the model covers. It is optional and top-level: a model without it behaves exactly as before and gets no depth check. Any other value is a validation error. The CLI warns (exit code unchanged) when a model does not follow its depth:
+
+| Depth | The model holds | Warned when |
+|---|---|---|
+| `diff` | only what a git change touches: changed steps, the components, links, tables and `trace` parts they pass | a component, link, table or part no step passes; with a change scope (`--repo --base` or `--changes`), a step the change does not touch |
+| `brief` | the whole composition without drill-down | any `parts`, `wires`, `tables`, `endpoints`, or step `trace`, `data`, `endpoints`, `payload`, `transforms` |
+| `full` | the whole composition and all drill-down | a datastore without `tables`, a service without `parts` (or parts without `wires`), an external without `endpoints`, a call step without `data` / `endpoints`, a step through parts without `trace`, no `payload` at all |
+
+`--depth 1|2|3` (or `diff|brief|full`; 1 = diff "Changes only", 2 = brief "Overview", 3 = full "Detailed") on `validate`, `verify` and `build` applies the same rules to a model without the field; if the model declares another depth the command exits 1. `build` shows the depth in the page's top bar and writes `depth` and `depthWarnings` into `report.json`. Comparison and example commands: [`guide.md`](guide.md#collection-depth-diff-brief-full). `models/demo-shop/` has all three: `model.json` (full), `model.brief.json`, `model.diff.json`.
+
 ## Optional drill-down detail
 
 All fields below are **optional**. A model without them is valid and renders exactly as before; a node that has any of them gets a "· 상세" caption and opens a detail view on click (Esc, the back button or browser Back closes it). Every item carries its own `evidence` and `verify` checks it like any other item.
@@ -134,4 +150,4 @@ Rules the validator enforces:
 }
 ```
 
-A complete worked example lives in `models/demo-shop/`: `model.json`, the hand-written `changes.example.json` and the generated `changes.auto.json`.
+A complete worked example lives in `models/demo-shop/`: `model.json`, the hand-written `changes.example.json` and the generated `changes.auto.json`. `model.brief.json` and `model.diff.json` are derived from them (`npm run build:depth-models`).

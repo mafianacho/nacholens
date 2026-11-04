@@ -17,7 +17,7 @@ function skillSource() {
   throw new Error("SKILL.md 를 찾을 수 없습니다 (nacholens 저장소 또는 설치된 사본에서 실행하세요)");
 }
 
-function version() {
+export function version() {
   try { return JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).version; } catch { /* vendored copy has its own */ }
   try { return readFileSync(join(ROOT, "VERSION"), "utf8").trim(); } catch { return "unknown"; }
 }

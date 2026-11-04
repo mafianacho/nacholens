@@ -61,14 +61,14 @@ function clock() {
   };
 }
 
-const IDS = ["app", "sv-model", "sv-changes", "sv-review-data", "sv-product", "sv-ref", "sv-commit", "sv-overlay", "sv-q", "sv-list", "sv-stage", "sv-crumbs", "sv-caption", "sv-canvas", "sv-transport", "sv-review", "sv-insp"];
+const IDS = ["app", "sv-model", "sv-changes", "sv-review-data", "sv-product", "sv-ref", "sv-depth", "sv-commit", "sv-overlay", "sv-q", "sv-list", "sv-stage", "sv-crumbs", "sv-caption", "sv-canvas", "sv-transport", "sv-review", "sv-insp"];
 // lang: most tests read the Korean words (the --lang ko build); the English default has its own tests
 function load({ model = demoModel(), changes = demoAutoChanges(), review = null, target = "html", hash = "", reduce = true, stage = [900, 520], storage = "memory", lang = "ko" } = {}) {
   const html = buildPage(model, changes, { target, review, lang });
   const scripts = [...html.matchAll(/<script[^>]*>([^]*?)<\/script>/g)].map((m) => m[1]);
   const byId = {};
   for (const id of IDS) { byId[id] = new El(id === "sv-canvas" ? "svg" : "div"); byId[id].attrs.id = id; }
-  for (const id of ["sv-ref", "sv-overlay", "sv-crumbs", "sv-review"]) byId[id].hidden = true;
+  for (const id of ["sv-ref", "sv-depth", "sv-overlay", "sv-crumbs", "sv-review"]) byId[id].hidden = true;
   byId["sv-model"]._text = scripts[0]; byId["sv-changes"]._text = scripts[1]; byId["sv-review-data"]._text = scripts[2];
   [byId["sv-stage"].clientWidth, byId["sv-stage"].clientHeight] = stage;
   const docListeners = {}, hist = [], ck = clock(), mem = {};
@@ -363,7 +363,7 @@ test("motion: the packet starts at the route start, eases in, moves forward only
   const i = uc("list-orders").steps.findIndex((s) => s.id === "request");
   sv.go(i, true);
   const p0 = sv.packet(), box = sv.scene().boxes.browser;
-  assert.ok(Math.abs(p0.x - (box.x + box.w / 2 + 3)) < 2, "first frame sits on the browser's edge, before any frame ran");
+  assert.ok(Math.abs(p0.x - (box.x + box.w / 2)) < 2, "first frame sits on the browser's edge, before any frame ran");
   const xs = [p0.x];
   clock.advance(4000, () => { const p = sv.packet(); if (p && sv.state.leg === 0 && !sv.state.finished) xs.push(p.x); });
   for (let k = 1; k < xs.length; k++) assert.ok(xs[k] >= xs[k - 1] - 1e-6, "never moves backwards");
@@ -453,4 +453,84 @@ test("the demo model itself renders every flow and every inside without errors",
     for (const c of demoModel().components.filter((x) => x.parts || x.tables || x.endpoints)) { sv.openDetail(c.id); for (let i = 0; i < u.steps.length; i++) sv.go(i, true); sv.closeDetail(); }
   }
   assert.equal(sv.state.mode, "arch");
+});
+
+test("the top bar shows the model's depth as a chip, in both languages; no depth, no chip", () => {
+  const withDepth = (depth) => ({ ...demoModel(), depth });
+  const ko = load({ model: withDepth("brief") }).byId["sv-depth"];
+  assert.equal(ko.hidden, false);
+  assert.equal(ko.textContent, "깊이 2 · 한눈에");
+  assert.equal(ko.title, "전체 구성만, 세부 없음");
+  const en = load({ model: withDepth("diff"), lang: "en" }).byId["sv-depth"];
+  assert.equal(en.textContent, "Depth 1 · Changes only");
+  assert.equal(en.title, "Only the parts the change touches");
+  assert.equal(load({ model: withDepth("full"), lang: "en" }).byId["sv-depth"].textContent, "Depth 3 · Detailed");
+  assert.equal(load({ model: withDepth("full"), lang: "en" }).byId["sv-depth"].title, "The whole composition and its detail");
+  const none = load({ model: tiny(), changes: null }).byId["sv-depth"];
+  assert.equal(none.hidden, true);
+  assert.equal(none.textContent, "");
+});
+
+/* ───────── wires: routed around boxes, never under them ───────── */
+const geom = (byId) => {
+  const boxes = byId["sv-canvas"].all((e) => e.attrs["data-id"] && e.find((c) => c.tagName === "rect")).map((g) => { const r = g.find((c) => c.tagName === "rect"); return { id: g.attrs["data-id"], x0: +r.attrs.x, y0: +r.attrs.y, x1: +r.attrs.x + +r.attrs.width, y1: +r.attrs.y + +r.attrs.height }; });
+  const wires = byId["sv-canvas"].all((e) => e.tagName === "path" && /(^| )(lk|wr)( |$)/.test(e.attrs.class ?? "")).map((p) => p.attrs.d.split(/(?=[ML])/).map((s) => s.slice(1).trim().split(/\s+/).map(Number)).map(([x, y]) => ({ x, y })));
+  return { boxes, wires };
+};
+const hitsBox = (a, b, q, pad = 1) => { // does the segment a-b cut through the inside of box q (shrunk by pad)?
+  let t0 = 0, t1 = 1; const dx = b.x - a.x, dy = b.y - a.y;
+  for (const [p, d] of [[-dx, a.x - (q.x0 + pad)], [dx, q.x1 - pad - a.x], [-dy, a.y - (q.y0 + pad)], [dy, q.y1 - pad - a.y]]) {
+    if (p === 0) { if (d < 0) return false; } else { const r = d / p; if (p < 0) { if (r > t1) return false; t0 = Math.max(t0, r); } else { if (r < t0) return false; t1 = Math.min(t1, r); } }
+  }
+  return t1 - t0 > 0.02;
+};
+const near = (p, q) => p.x >= q.x0 - 6 && p.x <= q.x1 + 6 && p.y >= q.y0 - 6 && p.y <= q.y1 + 6;
+function crowded(byId) { // [wires that run through a box they do not start or end at, wires lying on top of each other]
+  const { boxes, wires } = geom(byId); let through = 0, stacked = 0;
+  wires.forEach((w, i) => {
+    const ends = boxes.filter((q) => near(w[0], q) || near(w[w.length - 1], q));
+    for (const q of boxes) {
+      if (ends.includes(q)) continue;
+      if (w.some((p, k) => k && hitsBox(w[k - 1], p, q))) { through++; break; }
+    }
+    wires.slice(i + 1).forEach((v) => {
+      let shared = 0;
+      for (let k = 1; k < w.length; k++) for (let m = 1; m < v.length; m++) {
+        const a = w[k - 1], b = w[k], c = v[m - 1], d = v[m];
+        if (a.x === b.x && c.x === d.x && Math.abs(a.x - c.x) < 3) shared += Math.max(0, Math.min(Math.max(a.y, b.y), Math.max(c.y, d.y)) - Math.max(Math.min(a.y, b.y), Math.min(c.y, d.y)));
+        if (a.y === b.y && c.y === d.y && Math.abs(a.y - c.y) < 3) shared += Math.max(0, Math.min(Math.max(a.x, b.x), Math.max(c.x, d.x)) - Math.max(Math.min(a.x, b.x), Math.min(c.x, d.x)));
+      }
+      if (shared > 12) stacked++;
+    });
+  });
+  return [through, stacked];
+}
+
+test("wires: every flow, in the architecture and inside every component, runs between boxes - never through or under one, never on top of another wire", () => {
+  for (const stage of [[1440, 760], [1000, 600]]) {
+    const { sv, byId } = load({ stage });
+    for (const u of demoModel().useCases) {
+      sv.selectUseCase(u.id);
+      assert.deepEqual(crowded(byId), [0, 0], `${u.id} architecture ${stage}`);
+      for (const c of demoModel().components.filter((x) => x.parts || x.tables || x.endpoints)) {
+        sv.openDetail(c.id);
+        assert.deepEqual(crowded(byId), [0, 0], `${u.id} inside ${c.id} ${stage}`);
+        sv.closeDetail();
+      }
+    }
+  }
+});
+
+test("wires: drawn as orthogonal runs with rounded corners, and the travelling packet follows exactly the drawn wire", () => {
+  const { sv, byId, clock } = load({ reduce: false });
+  sv.selectUseCase("list-orders");
+  const { wires } = geom(byId);
+  assert.ok(wires.length > 0);
+  wires.forEach((w) => w.forEach((p, k) => { if (!k) return; const dx = Math.abs(p.x - w[k - 1].x), dy = Math.abs(p.y - w[k - 1].y); assert.ok(dx < 0.01 || dy < 0.01 || Math.max(dx, dy) <= 10, "straight run or inside a corner: " + JSON.stringify([w[k - 1], p])); }));
+  const i = uc("list-orders").steps.findIndex((x) => x.id === "session");
+  sv.go(i, true); clock.advance(60);
+  const run = layer(byId, "flow").find((e) => e.tagName === "path");
+  assert.ok(run, "a leg is travelling");
+  const norm = (d) => d.split(/(?=[ML])/).map((q) => q.slice(1).trim()).sort().join("|");
+  assert.ok(byId["sv-canvas"].all((e) => e.tagName === "path" && /(^| )lk( |$)/.test(e.attrs.class ?? "")).some((e) => norm(e.attrs.d) === norm(run.attrs.d)), "the packet runs on a drawn wire");
 });

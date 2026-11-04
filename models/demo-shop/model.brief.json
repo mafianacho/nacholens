@@ -1,0 +1,1054 @@
+{
+  "schemaVersion": 1,
+  "depth": "brief",
+  "product": {
+    "id": "demo-shop",
+    "name": "Demo shop",
+    "description": "Browser → gateway → order API → SQLite, with three third-party services. A tiny app that ships with nacholens, so every feature can be tried without a private repository."
+  },
+  "source": {
+    "repo": "demo/shop (built by nacholens demo)",
+    "commit": "e9f308776fd0d64ac269e02a5581415c2dfabf43"
+  },
+  "components": [
+    {
+      "id": "browser",
+      "kind": "client",
+      "label": "Browser\nvanilla JS",
+      "detail": "Static page from public/. Calls the API with same-origin fetch under /api and redirects the user to the login provider.",
+      "evidence": [
+        {
+          "file": "public/app.js",
+          "lines": [
+            6,
+            6
+          ],
+          "contains": "fetch(\"/api\" + path"
+        }
+      ]
+    },
+    {
+      "id": "gateway",
+      "kind": "gateway",
+      "label": "Gateway\nNode http",
+      "detail": "Serves public/ and forwards /api/* to the order API after a per-IP rate limit (120 requests per minute). Adds an x-request-id header.",
+      "evidence": [
+        {
+          "file": "gateway.js",
+          "lines": [
+            10,
+            10
+          ],
+          "contains": "const LIMIT_PER_MINUTE"
+        },
+        {
+          "file": "gateway.js",
+          "lines": [
+            26,
+            26
+          ],
+          "contains": "if (req.url.startsWith(\"/api/\"))"
+        }
+      ]
+    },
+    {
+      "id": "api",
+      "kind": "service",
+      "label": "Order API\nNode http",
+      "detail": "Handles sign-in, orders and the sales report. Every route except the two auth routes needs a valid session cookie; writes check the Origin header.",
+      "evidence": [
+        {
+          "file": "api.js",
+          "lines": [
+            36,
+            36
+          ],
+          "contains": "async function route(req, res)"
+        }
+      ]
+    },
+    {
+      "id": "db",
+      "kind": "datastore",
+      "label": "SQLite\nnode:sqlite",
+      "detail": "Tables oauth_state, sessions and orders. In memory unless SHOP_DB names a file.",
+      "evidence": [
+        {
+          "file": "db.js",
+          "lines": [
+            8,
+            8
+          ],
+          "contains": "CREATE TABLE IF NOT EXISTS orders"
+        }
+      ],
+      "row": 1
+    },
+    {
+      "id": "idp",
+      "kind": "external",
+      "label": "Login provider\nOAuth-style",
+      "detail": "Third-party sign-in. The demo ships a stand-in in mock-external.js with /authorize and /token.",
+      "evidence": [
+        {
+          "file": "mock-external.js",
+          "lines": [
+            7,
+            7
+          ],
+          "contains": "url.pathname === \"/authorize\""
+        }
+      ],
+      "row": 0
+    },
+    {
+      "id": "shipping",
+      "kind": "external",
+      "label": "Shipping tracker\nHTTP JSON",
+      "detail": "Third-party tracking lookup. Called once per order that has a tracking code (v2 and later).",
+      "evidence": [
+        {
+          "file": "api.js",
+          "lines": [
+            12,
+            12
+          ],
+          "contains": "async function trackShipping"
+        }
+      ],
+      "row": 2
+    },
+    {
+      "id": "analytics",
+      "kind": "external",
+      "label": "Analytics\nHTTP JSON",
+      "detail": "Third-party sales totals used by the report.",
+      "evidence": [
+        {
+          "file": "mock-external.js",
+          "lines": [
+            13,
+            13
+          ],
+          "contains": "url.pathname === \"/sales\""
+        }
+      ],
+      "row": 3
+    }
+  ],
+  "links": [
+    {
+      "a": "browser",
+      "b": "gateway",
+      "label": "HTTP, same origin /api/*",
+      "evidence": [
+        {
+          "file": "public/app.js",
+          "lines": [
+            6,
+            6
+          ],
+          "contains": "fetch(\"/api\" + path"
+        }
+      ]
+    },
+    {
+      "a": "gateway",
+      "b": "api",
+      "label": "HTTP forward with x-request-id",
+      "evidence": [
+        {
+          "file": "gateway.js",
+          "lines": [
+            27,
+            33
+          ],
+          "contains": "const upstream = await fetch(API + req.url"
+        }
+      ]
+    },
+    {
+      "a": "api",
+      "b": "db",
+      "label": "SQL (node:sqlite)",
+      "evidence": [
+        {
+          "file": "api.js",
+          "lines": [
+            4,
+            4
+          ],
+          "contains": "from \"./db.js\""
+        }
+      ]
+    },
+    {
+      "a": "api",
+      "b": "idp",
+      "label": "HTTPS: POST /token",
+      "evidence": [
+        {
+          "file": "api.js",
+          "lines": [
+            51,
+            51
+          ],
+          "contains": "fetch(EXTERNAL + \"/token\""
+        }
+      ]
+    },
+    {
+      "a": "api",
+      "b": "shipping",
+      "label": "HTTPS: GET /track",
+      "evidence": [
+        {
+          "file": "api.js",
+          "lines": [
+            15,
+            15
+          ],
+          "contains": "fetch(`${EXTERNAL}/track"
+        }
+      ]
+    },
+    {
+      "a": "api",
+      "b": "analytics",
+      "label": "HTTPS: GET /sales",
+      "evidence": [
+        {
+          "file": "api.js",
+          "lines": [
+            79,
+            79
+          ],
+          "contains": "fetch(EXTERNAL + \"/sales\")"
+        }
+      ]
+    },
+    {
+      "a": "browser",
+      "b": "idp",
+      "label": "Browser redirect to /authorize",
+      "evidence": [
+        {
+          "file": "api.js",
+          "lines": [
+            46,
+            46
+          ],
+          "contains": "location: to.toString()"
+        }
+      ]
+    }
+  ],
+  "useCases": [
+    {
+      "id": "sign-in",
+      "title": "Sign in with the login provider",
+      "summary": "The user is sent to a third-party provider and comes back with a one-time code that the API turns into a session cookie.",
+      "trigger": "GET /api/auth/start → provider → GET /api/auth/callback",
+      "steps": [
+        {
+          "id": "start",
+          "kind": "request",
+          "from": "browser",
+          "via": [
+            "gateway"
+          ],
+          "to": "api",
+          "label": "Start sign-in",
+          "narration": "The user clicks \"Sign in\". The browser asks /api/auth/start; the gateway rate-limits the request and forwards it to the order API.",
+          "request": "GET /api/auth/start",
+          "evidence": [
+            {
+              "file": "public/index.html",
+              "lines": [
+                5,
+                5
+              ],
+              "contains": "href=\"/api/auth/start\""
+            },
+            {
+              "file": "api.js",
+              "lines": [
+                40,
+                40
+              ],
+              "contains": "key === \"GET /api/auth/start\""
+            },
+            {
+              "file": "gateway.js",
+              "lines": [
+                24,
+                24
+              ],
+              "contains": "if (!allowed("
+            }
+          ]
+        },
+        {
+          "id": "make-state",
+          "kind": "internal",
+          "from": "api",
+          "to": "api",
+          "label": "Create a one-time state value",
+          "narration": "The API creates a random state value and builds the provider URL with that state and its own callback address.",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                41,
+                46
+              ],
+              "contains": "const state = randomUUID();"
+            }
+          ]
+        },
+        {
+          "id": "save-state",
+          "kind": "call",
+          "from": "api",
+          "to": "db",
+          "label": "Remember the state",
+          "narration": "The state is written to oauth_state so the callback can prove it started here.",
+          "request": "INSERT INTO oauth_state (state, created_at)",
+          "response": "ok",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                42,
+                42
+              ],
+              "contains": "saveState(state);"
+            },
+            {
+              "file": "db.js",
+              "lines": [
+                14,
+                16
+              ],
+              "contains": "export function saveState"
+            }
+          ]
+        },
+        {
+          "id": "redirect",
+          "kind": "response",
+          "from": "api",
+          "via": [
+            "gateway"
+          ],
+          "to": "browser",
+          "label": "Redirect to the provider",
+          "narration": "The API answers 302 with the provider URL. The gateway passes status and headers through unchanged.",
+          "response": "302 Location: provider /authorize?state=…",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                46,
+                46
+              ],
+              "contains": "return send(res, 302, { redirect: to.toString() }"
+            },
+            {
+              "file": "gateway.js",
+              "lines": [
+                37,
+                37
+              ],
+              "contains": "res.writeHead(upstream.status"
+            }
+          ]
+        },
+        {
+          "id": "consent",
+          "kind": "request",
+          "from": "browser",
+          "to": "idp",
+          "label": "Pick an account at the provider",
+          "narration": "The browser talks to the provider directly, outside the gateway. The demo provider approves at once.",
+          "request": "GET /authorize?state=…&redirect_uri=…",
+          "response": "302 back to /api/auth/callback?code=…&state=…",
+          "evidence": [
+            {
+              "file": "mock-external.js",
+              "lines": [
+                7,
+                10
+              ],
+              "contains": "url.pathname === \"/authorize\""
+            }
+          ]
+        },
+        {
+          "id": "callback",
+          "kind": "request",
+          "from": "browser",
+          "via": [
+            "gateway"
+          ],
+          "to": "api",
+          "label": "Come back with the code",
+          "narration": "The provider sends the browser back to the callback address with the code and the state.",
+          "request": "GET /api/auth/callback?code=…&state=…",
+          "evidence": [
+            {
+              "file": "mock-external.js",
+              "lines": [
+                8,
+                8
+              ],
+              "contains": "location: `${url.searchParams.get(\"redirect_uri\")}"
+            },
+            {
+              "file": "api.js",
+              "lines": [
+                49,
+                49
+              ],
+              "contains": "key === \"GET /api/auth/callback\""
+            }
+          ]
+        },
+        {
+          "id": "consume-state",
+          "kind": "call",
+          "from": "api",
+          "to": "db",
+          "label": "Use the state once",
+          "narration": "The state row is deleted in the same statement that reads it, so a replayed callback finds nothing and gets 400.",
+          "request": "DELETE FROM oauth_state … RETURNING state",
+          "response": "row or none",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                50,
+                50
+              ],
+              "contains": "if (!consumeState("
+            },
+            {
+              "file": "db.js",
+              "lines": [
+                20,
+                20
+              ],
+              "contains": "DELETE FROM oauth_state WHERE state = ? RETURNING state"
+            }
+          ]
+        },
+        {
+          "id": "exchange",
+          "kind": "call",
+          "from": "api",
+          "to": "idp",
+          "label": "Exchange the code",
+          "narration": "The API posts the code to the provider token endpoint and reads the verified email from the answer.",
+          "request": "POST /token {code}",
+          "response": "{ email }",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                51,
+                55
+              ],
+              "contains": "fetch(EXTERNAL + \"/token\""
+            },
+            {
+              "file": "mock-external.js",
+              "lines": [
+                11,
+                11
+              ],
+              "contains": "url.pathname === \"/token\""
+            }
+          ]
+        },
+        {
+          "id": "save-session",
+          "kind": "call",
+          "from": "api",
+          "to": "db",
+          "label": "Create the session",
+          "narration": "A random session id is stored with the email and an 8 hour expiry.",
+          "request": "INSERT INTO sessions (id, email, expires_at)",
+          "response": "ok",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                55,
+                55
+              ],
+              "contains": "saveSession(sid, email, SESSION_TTL_MS)"
+            },
+            {
+              "file": "db.js",
+              "lines": [
+                23,
+                25
+              ],
+              "contains": "export function saveSession"
+            }
+          ]
+        },
+        {
+          "id": "done",
+          "kind": "response",
+          "from": "api",
+          "via": [
+            "gateway"
+          ],
+          "to": "browser",
+          "label": "Back to the shop with a cookie",
+          "narration": "302 to / with an HttpOnly, SameSite=Lax cookie that carries the session id.",
+          "response": "302 Location: /  Set-Cookie: sid=…",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                56,
+                56
+              ],
+              "contains": "return send(res, 302, { ok: true }"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "list-orders",
+      "title": "List my orders",
+      "summary": "The page loads the signed-in user's orders. For each order with a tracking code the API asks the shipping tracker for its status.",
+      "trigger": "GET /api/orders",
+      "steps": [
+        {
+          "id": "request",
+          "kind": "request",
+          "from": "browser",
+          "via": [
+            "gateway"
+          ],
+          "to": "api",
+          "label": "Load the order list",
+          "narration": "When the page opens, the browser asks /api/orders. The gateway checks the rate limit and forwards the request.",
+          "request": "GET /api/orders",
+          "evidence": [
+            {
+              "file": "public/app.js",
+              "lines": [
+                12,
+                12
+              ],
+              "contains": "api(\"/orders\")"
+            },
+            {
+              "file": "api.js",
+              "lines": [
+                62,
+                62
+              ],
+              "contains": "key === \"GET /api/orders\""
+            },
+            {
+              "file": "gateway.js",
+              "lines": [
+                24,
+                24
+              ],
+              "contains": "if (!allowed("
+            }
+          ]
+        },
+        {
+          "id": "session",
+          "kind": "call",
+          "from": "api",
+          "to": "db",
+          "label": "Check the session",
+          "narration": "The sid cookie is looked up in sessions. Missing or expired means 401 and nothing else runs.",
+          "request": "SELECT email FROM sessions WHERE id = ? AND expires_at > now",
+          "response": "email or none",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                31,
+                34
+              ],
+              "contains": "function sessionOf(req)"
+            },
+            {
+              "file": "api.js",
+              "lines": [
+                60,
+                60
+              ],
+              "contains": "if (!me) return send(res, 401"
+            },
+            {
+              "file": "db.js",
+              "lines": [
+                27,
+                29
+              ],
+              "contains": "export function findSession"
+            }
+          ]
+        },
+        {
+          "id": "query",
+          "kind": "call",
+          "from": "api",
+          "to": "db",
+          "label": "Read the user's orders",
+          "narration": "The latest 50 orders of the signed-in email are read, newest first.",
+          "request": "SELECT … FROM orders WHERE email = ? ORDER BY id DESC LIMIT 50",
+          "response": "order rows",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                63,
+                63
+              ],
+              "contains": "const rows = listOrders(me.email);"
+            },
+            {
+              "file": "db.js",
+              "lines": [
+                31,
+                33
+              ],
+              "contains": "export function listOrders"
+            }
+          ]
+        },
+        {
+          "id": "shipping",
+          "kind": "call",
+          "from": "api",
+          "to": "shipping",
+          "label": "Ask the tracker for each status",
+          "narration": "Orders that have a tracking code are looked up in parallel. A failed lookup becomes \"unknown\" instead of failing the list.",
+          "request": "GET /track?code=TRK-… (one per order)",
+          "response": "{ status } per order",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                12,
+                18
+              ],
+              "contains": "async function trackShipping"
+            }
+          ]
+        },
+        {
+          "id": "shape",
+          "kind": "internal",
+          "from": "api",
+          "to": "api",
+          "label": "Build the response",
+          "narration": "Each row becomes { id, item, qty, shipping, createdAt }. The database column names do not leave the server.",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                65,
+                65
+              ],
+              "contains": "orders: rows.map((o, i) =>"
+            }
+          ]
+        },
+        {
+          "id": "response",
+          "kind": "response",
+          "from": "api",
+          "via": [
+            "gateway"
+          ],
+          "to": "browser",
+          "label": "Show the list with status",
+          "narration": "The page renders one line per order, including a readable shipping status.",
+          "response": "200 { orders: [{ id, item, qty, shipping, createdAt }] }",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                65,
+                65
+              ],
+              "contains": "return send(res, 200, { orders: rows.map"
+            },
+            {
+              "file": "public/app.js",
+              "lines": [
+                16,
+                16
+              ],
+              "contains": "li.textContent ="
+            },
+            {
+              "file": "gateway.js",
+              "lines": [
+                38,
+                38
+              ],
+              "contains": "return res.end(Buffer.from(await upstream.arrayBuffer()))"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "place-order",
+      "title": "Place an order",
+      "summary": "A signed-in user submits an item and a quantity. The API checks origin and input, stores the order and returns its id.",
+      "trigger": "POST /api/orders",
+      "steps": [
+        {
+          "id": "request",
+          "kind": "request",
+          "from": "browser",
+          "via": [
+            "gateway"
+          ],
+          "to": "api",
+          "label": "Submit the form",
+          "narration": "The browser posts JSON. The gateway forwards the body untouched.",
+          "request": "POST /api/orders {item, qty}",
+          "evidence": [
+            {
+              "file": "public/app.js",
+              "lines": [
+                25,
+                25
+              ],
+              "contains": "method: \"POST\""
+            },
+            {
+              "file": "api.js",
+              "lines": [
+                68,
+                68
+              ],
+              "contains": "key === \"POST /api/orders\""
+            },
+            {
+              "file": "gateway.js",
+              "lines": [
+                24,
+                24
+              ],
+              "contains": "if (!allowed("
+            }
+          ]
+        },
+        {
+          "id": "session",
+          "kind": "call",
+          "from": "api",
+          "to": "db",
+          "label": "Check the session",
+          "narration": "The sid cookie is looked up in sessions. Missing or expired means 401 and nothing else runs.",
+          "request": "SELECT email FROM sessions WHERE id = ? AND expires_at > now",
+          "response": "email or none",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                31,
+                34
+              ],
+              "contains": "function sessionOf(req)"
+            },
+            {
+              "file": "api.js",
+              "lines": [
+                60,
+                60
+              ],
+              "contains": "if (!me) return send(res, 401"
+            },
+            {
+              "file": "db.js",
+              "lines": [
+                27,
+                29
+              ],
+              "contains": "export function findSession"
+            }
+          ]
+        },
+        {
+          "id": "origin",
+          "kind": "internal",
+          "from": "api",
+          "to": "api",
+          "label": "Check the Origin header",
+          "narration": "A write is accepted only when the Origin header equals the shop's public origin; otherwise 403.",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                69,
+                69
+              ],
+              "contains": "req.headers.origin !== PUBLIC_ORIGIN"
+            }
+          ]
+        },
+        {
+          "id": "validate",
+          "kind": "internal",
+          "from": "api",
+          "to": "api",
+          "label": "Validate the input",
+          "narration": "item must be text (cut to 80 characters), qty a whole number from 1 to 99; anything else is 400.",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                70,
+                72
+              ],
+              "contains": "const body = await readBody(req);"
+            }
+          ]
+        },
+        {
+          "id": "insert",
+          "kind": "call",
+          "from": "api",
+          "to": "db",
+          "label": "Store the order",
+          "narration": "The order is inserted with the user's email and, from v2 on, a generated tracking code.",
+          "request": "INSERT INTO orders (email, item, qty, tracking, created_at)",
+          "response": "new id",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                73,
+                73
+              ],
+              "contains": "const id = insertOrder("
+            },
+            {
+              "file": "db.js",
+              "lines": [
+                35,
+                38
+              ],
+              "contains": "export function insertOrder"
+            }
+          ]
+        },
+        {
+          "id": "response",
+          "kind": "response",
+          "from": "api",
+          "via": [
+            "gateway"
+          ],
+          "to": "browser",
+          "label": "Return the new id",
+          "narration": "201 with { id }; the page reloads the list.",
+          "response": "201 { id }",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                74,
+                74
+              ],
+              "contains": "return send(res, 201, { id })"
+            },
+            {
+              "file": "public/app.js",
+              "lines": [
+                29,
+                29
+              ],
+              "contains": "await loadOrders();"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sales-report",
+      "title": "Sales report (admin only)",
+      "summary": "Only emails on the admin list may read totals, which come from a third-party analytics service.",
+      "trigger": "GET /api/reports/sales",
+      "steps": [
+        {
+          "id": "request",
+          "kind": "request",
+          "from": "browser",
+          "via": [
+            "gateway"
+          ],
+          "to": "api",
+          "label": "Ask for the totals",
+          "narration": "The page requests the report after loading.",
+          "request": "GET /api/reports/sales",
+          "evidence": [
+            {
+              "file": "public/app.js",
+              "lines": [
+                33,
+                33
+              ],
+              "contains": "api(\"/reports/sales\")"
+            },
+            {
+              "file": "api.js",
+              "lines": [
+                77,
+                77
+              ],
+              "contains": "key === \"GET /api/reports/sales\""
+            },
+            {
+              "file": "gateway.js",
+              "lines": [
+                24,
+                24
+              ],
+              "contains": "if (!allowed("
+            }
+          ]
+        },
+        {
+          "id": "session",
+          "kind": "call",
+          "from": "api",
+          "to": "db",
+          "label": "Check the session",
+          "narration": "The sid cookie is looked up in sessions. Missing or expired means 401 and nothing else runs.",
+          "request": "SELECT email FROM sessions WHERE id = ? AND expires_at > now",
+          "response": "email or none",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                31,
+                34
+              ],
+              "contains": "function sessionOf(req)"
+            },
+            {
+              "file": "api.js",
+              "lines": [
+                60,
+                60
+              ],
+              "contains": "if (!me) return send(res, 401"
+            },
+            {
+              "file": "db.js",
+              "lines": [
+                27,
+                29
+              ],
+              "contains": "export function findSession"
+            }
+          ]
+        },
+        {
+          "id": "admin-check",
+          "kind": "internal",
+          "from": "api",
+          "to": "api",
+          "label": "Check the admin list",
+          "narration": "The session email must be in ADMIN_EMAILS (default: the demo buyer); otherwise 403.",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                9,
+                9
+              ],
+              "contains": "const ADMINS = new Set("
+            },
+            {
+              "file": "api.js",
+              "lines": [
+                78,
+                78
+              ],
+              "contains": "if (!ADMINS.has(me.email))"
+            }
+          ]
+        },
+        {
+          "id": "analytics",
+          "kind": "call",
+          "from": "api",
+          "to": "analytics",
+          "label": "Fetch the totals",
+          "narration": "The API calls the analytics service. If it fails the API answers 502 instead of guessing numbers.",
+          "request": "GET /sales",
+          "response": "{ total, orders }",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                79,
+                80
+              ],
+              "contains": "const r = await fetch(EXTERNAL + \"/sales\");"
+            },
+            {
+              "file": "mock-external.js",
+              "lines": [
+                13,
+                13
+              ],
+              "contains": "url.pathname === \"/sales\""
+            }
+          ]
+        },
+        {
+          "id": "response",
+          "kind": "response",
+          "from": "api",
+          "via": [
+            "gateway"
+          ],
+          "to": "browser",
+          "label": "Show the totals",
+          "narration": "The totals are passed through and shown under the order list.",
+          "response": "200 { total, orders }",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                81,
+                81
+              ],
+              "contains": "return send(res, 200, await r.json());"
+            },
+            {
+              "file": "public/app.js",
+              "lines": [
+                33,
+                33
+              ],
+              "contains": "$(\"sales\").textContent"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

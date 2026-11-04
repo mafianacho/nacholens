@@ -14,6 +14,7 @@ Ouvrez votre agent de code IA (Claude Code, Codex, Cursor, …) dans le dépôt 
 Utilise nacholens pour répondre à ma demande ci-dessous sur ce dépôt, sous la forme d'une page que je peux ouvrir.
 
 Ma demande : <écrivez ici ce que vous voulez voir>
+Profondeur (facultatif) : 1 changements seuls · 2 vue d'ensemble · 3 détaillé (tables et intérieur). Sans précision, choisis selon ma demande et dis-moi laquelle.
 
 Comment :
 1. Récupère le guide d'agent et la CLI de nacholens (Node.js 20+ et git nécessaires ; rien n'est installé dans ce dépôt) :

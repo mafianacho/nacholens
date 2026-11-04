@@ -16,6 +16,7 @@ Open your AI coding agent (Claude Code, Codex, Cursor, …) in the repository yo
 Use nacholens to answer my request below about this repository, as a page I can open.
 
 My request: <write what you want to see here>
+Depth (optional): 1 Changes only · 2 Overview · 3 Detailed (tables and internals). If I name none, pick by my request and tell me which.
 
 How:
 1. Get the nacholens playbook and CLI (needs Node.js 20+ and git; nothing is installed into this repository):

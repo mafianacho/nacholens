@@ -14,6 +14,7 @@ Sieh, was eine KI in einem Backend geändert hat, ohne Code zu lesen. nacholens 
 Nutze nacholens, um meine Anfrage unten zu diesem Repository als Seite zu beantworten, die ich öffnen kann.
 
 Meine Anfrage: <hier schreiben, was du sehen willst>
+Tiefe (optional): 1 nur Änderungen · 2 Überblick · 3 Details (Tabellen und Innenleben). Ohne Angabe wähle nach meiner Anfrage und sag mir, welche.
 
 So geht's:
 1. Hole das nacholens-Playbook und die CLI (braucht Node.js 20+ und git; in dieses Repository wird nichts installiert):

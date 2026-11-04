@@ -11,7 +11,8 @@ import { overlayFromRepo } from "./diff.js";
 import { makeTemplate } from "./template.js";
 import { scanRepo, formatScan } from "./scan.js";
 import { makeDemoRepo } from "./demo.js";
-import { install } from "./install.js";
+import { install, version } from "./install.js";
+import { DEPTHS, normalizeDepth, depthName, resolveDepth, checkDepth, sizeOf, scanDiff, formatScanDiff } from "./depth.js";
 import { buildReview, validateIntent, checkIntent, buildImpact, discoverTests, isTestFile } from "./review.js";
 
 export const EXIT = { OK: 0, MODEL: 1, USAGE: 2, STRICT: 3, INTENT: 4 };
@@ -32,8 +33,9 @@ const USAGE = `nacholens — AI 가 바꾼 백엔드 변경을 유즈케이스 �
   단계별:
     nacholens init     --repo <경로> [--model <파일>] [--name <제품명>]   빈 모델 템플릿 생성
     nacholens scan     --repo <경로> [--json] [--limit N]                  모델 초안용 후보(스택·라우트·게이트웨이·DB·외부 주소·HTTP 호출)
-    nacholens validate [<model.json>] [--repo <경로>] [--changes <파일>]
-    nacholens verify   [<model.json>] (--repo <경로> [--ref <ref>] | --source <디렉터리>)
+    nacholens scan     --repo <경로> --depth diff --base <ref> [--head <ref>] [--json]   변경 줄에 닿는 모델링 후보 (diff 수준)
+    nacholens validate [<model.json>] [--repo <경로>] [--changes <파일>] [--depth ...] [--base <ref>]
+    nacholens verify   [<model.json>] (--repo <경로> [--ref <ref>] [--base <ref>] | --source <디렉터리>) [--depth ...]
     nacholens diff     --repo <경로> --base <ref> [--head <ref>] [--model <파일>] [--out <changes.json>] [--strict]
     nacholens build    <model.json> [--changes <파일>] ...                (저장소 없이 만들기)
     nacholens intent   --model <파일> --intent <intent.json> [--repo <경로> --base <ref>] [--strict-intent]   기획 의도 대조
@@ -43,12 +45,20 @@ const USAGE = `nacholens — AI 가 바꾼 백엔드 변경을 유즈케이스 �
                       --intent <intent.json>  기획 의도 (기대사항을 모델과 대조)
               회귀 지도는 --repo --base 가 있으면 자동 (테스트는 경로 문자열로 찾는 추정)
 
+  깊이:       --depth 1|2|3  또는  diff|brief|full   (scan·validate·verify·build; 모델의 선택 필드 depth 와 같은 값)
+              1 변경만 (diff)   변경(--base..--head)이 닿는 유즈케이스·단계와 그 단계가 지나는 컴포넌트·table 만. 얕다는 뜻이 아니라 변경에 한정한다는 뜻
+              2 한눈에 (brief)  전체 구성(컴포넌트·연결·주요 유즈케이스·datastore), drill-down(parts·wires·columns·endpoints·trace·payload) 없음
+              3 자세히 (full)   전체 구성 + 스키마가 허용하는 세부 전부
+              수준을 어기면 경고(종료 코드 영향 없음). 모델에 depth 가 없고 --depth 도 없으면 수준 검사를 하지 않습니다.
+
   공통 옵션:  --model <파일>   모델 위치 (기본 <repo>/.nacholens/model.json)
               --head <ref>     기본 HEAD
               --out <dir>      기본 ./nacholens-out (저장소 없이 만들 때는 ./dist)
               --format html|artifact|both|auto   auto(기본): --agent/NACHOLENS_AGENT 가 claude* 이면 artifact, 아니면 html
               --lang en|ko     화면 글자 언어 (기본 en; 모델 글자는 쓴 그대로)
               --strict         모델에 없는 변경이 있으면 종료 코드 3
+
+  nacholens --version   설치된 CLI 버전 (수집 수준은 0.3.1 부터)
 
   종료 코드:  0 정상 · 1 모델/근거 문제(고쳐야 함) · 2 사용법/입출력/git 오류 · 3 --strict 에서 모델에 없는 변경 발견
               4 --strict-intent 에서 기획 의도가 미충족
@@ -156,10 +166,38 @@ function logImpact(im, log) {
   });
 }
 
+/** --depth against the model's own depth, plus the diff scope when there is one. `{ code }` != 0 stops the command. */
+function applyDepth(model, opt, { changes = null, repo = null } = {}) {
+  const r = resolveDepth(model, opt.depth);
+  if (r.error) return { code: EXIT.MODEL, error: r.error };
+  const out = { code: EXIT.OK, depth: r.depth, declared: r.declared, warnings: [], notes: [], scopeWarnings: [] };
+  if (!r.depth) return out;
+  let scope = changes;
+  if (r.depth === "diff" && !scope && repo && opt.base) {
+    const o = overlayFromRepo(repo, model, opt.base, opt.head ?? "HEAD");
+    scope = o.overlay; out.scopeWarnings = o.warnings;
+  }
+  if (r.depth === "diff" && !scope && opt.depth === "diff")
+    throw new Error("--depth diff 는 변경 범위가 필요합니다: --repo 와 --base (또는 --changes)\n" + USAGE);
+  const c = checkDepth(model, r.depth, { changes: scope });
+  out.warnings = c.warnings; out.notes = c.notes; out.scope = scope;
+  return out;
+}
+function logDepth(d, model, log) {
+  if (!d.depth) return;
+  const z = sizeOf(model);
+  log(`${depthName(d.depth)}${d.declared ? "" : " (--depth 로 지정, 모델에 depth 선언 없음)"} · 컴포넌트 ${z.components} · 연결 ${z.links} · 유즈케이스 ${z.useCases} · 단계 ${z.steps} · 상세 parts ${z.parts} · wires ${z.wires} · tables ${z.tables}(columns ${z.columns}) · endpoints ${z.endpoints}`);
+  d.scopeWarnings.forEach((w) => log("⚠ " + w));
+  d.warnings.forEach((w) => log("⚠ " + w));
+  d.notes.forEach((n) => log("· " + n));
+}
+
 export function run(argv, env = process.env, log = console.log) {
   const [cmd, ...rest] = argv;
+  if (cmd === "--version" || cmd === "-v" || cmd === "version") { log(version()); return EXIT.OK; }
   if (!cmd || cmd === "help" || cmd === "--help") { log(USAGE); return EXIT.OK; }
   const { pos, opt } = parseArgs(rest);
+  if (opt.depth !== undefined) opt.depth = normalizeDepth(opt.depth); // 1|2|3 -> diff|brief|full (usage error otherwise)
   if (opt.help) { log(USAGE); return EXIT.OK; }
 
   if (cmd === "init") {
@@ -174,9 +212,19 @@ export function run(argv, env = process.env, log = console.log) {
 
   if (cmd === "scan") {
     if (!opt.repo) throw new Error("--repo 가 필요합니다\n" + USAGE);
-    openRepo(opt.repo);
-    const r = scanRepo(resolve(opt.repo), opt.limit ? { limit: Math.max(1, Number(opt.limit) || 60) } : {});
-    log(opt.json ? JSON.stringify(r, null, 2) : formatScan(r));
+    const repo = openRepo(opt.repo);
+    if (opt.depth === "diff") {
+      if (!opt.base) throw new Error("scan --depth diff 는 --base 가 필요합니다 (비교할 이전 ref)\n" + USAGE);
+      const d = scanDiff(repo, opt.base, opt.head ?? "HEAD");
+      log(opt.json ? JSON.stringify(d, null, 2) : formatScanDiff(d));
+      return EXIT.OK;
+    }
+    // brief needs the composition, not every call site: fewer leads per section unless --limit says otherwise
+    const limit = opt.limit ? Math.max(1, Number(opt.limit) || 60) : opt.depth === "brief" ? 25 : 60;
+    const r = scanRepo(resolve(opt.repo), { limit });
+    if (opt.depth) r.depth = opt.depth;
+    const guide = { brief: "brief 수준: 컴포넌트·연결·주요 유즈케이스·datastore 만 쓰세요. parts·wires·columns·endpoints·trace·payload 는 쓰지 않습니다.", full: "full 수준: 전체 구성에 더해 table·column(마이그레이션 근거), 서비스 내부 parts·wires, endpoints, trace, data, payload, transforms 까지 쓰세요." }[opt.depth];
+    log(opt.json ? JSON.stringify(r, null, 2) : (guide ? guide + "\n\n" : "") + formatScan(r));
     return EXIT.OK;
   }
 
@@ -193,6 +241,7 @@ export function run(argv, env = process.env, log = console.log) {
     if (opt.format) args.push("--format", opt.format);
     if (opt.agent) args.push("--agent", opt.agent);
     if (opt.lang) args.push("--lang", opt.lang);
+    if (opt.depth) args.push("--depth", opt.depth);
     return run(args, env, log);
   }
 
@@ -240,6 +289,9 @@ export function run(argv, env = process.env, log = console.log) {
     if (errors.length) { printErrors(errors, log); return EXIT.MODEL; }
     const steps = model.useCases.reduce((n, u) => n + u.steps.length, 0);
     log(`✓ 유효: 컴포넌트 ${model.components.length}, 연결 ${model.links.length}, 유즈케이스 ${model.useCases.length}, 단계 ${steps}` + (changes ? `, 변경 오버레이 ${changes.components.length}개 컴포넌트` : ""));
+    const d = applyDepth(model, opt, { changes, repo: opt.repo && opt.base ? openRepo(opt.repo) : null });
+    if (d.code) { log("✗ " + d.error); return d.code; }
+    logDepth(d, model, log);
     return EXIT.OK;
   }
 
@@ -247,9 +299,9 @@ export function run(argv, env = process.env, log = console.log) {
     const model = needModel();
     const errors = validateModel(model);
     if (errors.length) { printErrors(errors, log); return EXIT.MODEL; }
-    let result, where;
+    let result, where, repo = null;
     if (opt.repo) {
-      const repo = openRepo(opt.repo);
+      repo = openRepo(opt.repo);
       const sha = repo.resolve(opt.ref ?? model.source.commit);
       result = verifyEvidenceWith(model, (f) => repo.show(sha, f));
       where = `${model.source.repo} @ ${sha.slice(0, 7)}`;
@@ -260,6 +312,11 @@ export function run(argv, env = process.env, log = console.log) {
     if (result.failures.length) { result.failures.forEach((f) => log("✗ " + f)); log(`근거 ${result.checked}건 중 ${result.failures.length}건 실패`); return EXIT.MODEL; }
     log(`✓ 근거 ${result.checked}건 모두 소스와 일치 (${where})`);
     warnNoContains(model, log);
+    let changes = null;
+    if (opt.changes) { changes = readJson(opt.changes, "변경 오버레이"); const bad = validateChanges(changes, model); if (bad.length) { printErrors(bad, log); return EXIT.MODEL; } }
+    const d = applyDepth(model, opt, { changes, repo });
+    if (d.code) { log("✗ " + d.error); return d.code; }
+    logDepth(d, model, log);
     return EXIT.OK;
   }
 
@@ -326,6 +383,12 @@ export function run(argv, env = process.env, log = console.log) {
       if (bad.length) { printErrors(bad, log); return EXIT.MODEL; }
     }
 
+    const d = applyDepth(model, opt, { changes });
+    if (d.code) { log("✗ " + d.error); return d.code; }
+    logDepth(d, model, log);
+    // the page and the artifact show the depth that was checked, also when it came from --depth
+    const shown = d.depth ? { ...model, depth: d.depth } : model;
+
     const mr = makeReview(model, changes, opt, repo, log);
     if (mr.code) return mr.code;
     const review = mr.review;
@@ -336,11 +399,11 @@ export function run(argv, env = process.env, log = console.log) {
     const id = model.product.id, written = [];
     if (format === "html" || format === "both") {
       const f = join(out, `${id}.html`);
-      writeFileSync(f, buildPage(model, changes, { target: "html", review, lang })); written.push(f);
+      writeFileSync(f, buildPage(shown, changes, { target: "html", review, lang })); written.push(f);
     }
     if (format === "artifact" || format === "both") {
       const f = join(out, `${id}.artifact.html`), m = join(out, `${id}.artifact.json`);
-      writeFileSync(f, buildPage(model, changes, { target: "artifact", review, lang }));
+      writeFileSync(f, buildPage(shown, changes, { target: "artifact", review, lang }));
       writeFileSync(m, JSON.stringify(artifactManifest(model, `${id}.artifact.html`), null, 2) + "\n");
       written.push(f, m);
     }
@@ -353,6 +416,7 @@ export function run(argv, env = process.env, log = console.log) {
         base: changes?.generated?.base ?? null, head: changes?.generated?.head ?? null,
         changedSteps: (changes?.steps ?? []).map((s) => `${s.useCase}/${s.step}`),
         changedComponents: (changes?.components ?? []).map((c) => c.id),
+        depth: d.depth, depthWarnings: d.warnings,
         unmapped: changes?.unmapped ?? [], ignoredCount: (changes?.ignored ?? []).length, warnings,
         review: review ? { compare: review.compare?.summary ?? null, intent: review.intent?.summary ?? null, impact: review.impact?.summary ?? null } : null,
         outputs: written.map((w) => w.slice(out.length + 1)).concat("report.json"),

@@ -179,6 +179,41 @@ const NOISY_HOST_FILE = /\.(sql|md|mdx|lock|json|svg)$|(^|\/)(\.github|migration
 
 const clip = (s, n = 140) => { s = s.trim().replace(/\s+/g, " "); return s.length > n ? s.slice(0, n - 1) + "…" : s; };
 
+/**
+ * Leads of one file (routes, gateways, data, clients, env-injected addresses, outbound hosts) with line numbers.
+ * Shared by the whole-repo scan and by `scan --depth diff` (which reads the head version of changed files).
+ * `routes` are not capped; the per-file cap applies to gateways, data and clients.
+ */
+export function fileLeads(f, text) {
+  const out = { routes: [], gateways: [], data: [], clients: [], envs: [], hosts: [] };
+  for (const r of nextRoutes(f, text)) out.routes.push({ file: f, line: r.line, method: r.method, path: r.path, text: `${r.method} ${r.path}  (file-based route)` });
+  const lines = text.split("\n");
+  const fileHasMethod = /\.method\b|\bMethod\b/.test(text);
+  const noData = NOISY_DATA_DIR.test(f), noHosts = NOISY_HOST_FILE.test(f);
+  const perFile = { data: 0, clients: 0, gateways: 0 };
+  lines.forEach((ln, i) => {
+    if (ln.length > 600) return;
+    const rt = routeFromLine(f, ln, fileHasMethod);
+    if (rt) out.routes.push({ file: f, line: i + 1, method: rt.method, path: rt.path, text: clip(ln) });
+    const isComment = /^\s*(\/\/|#|\*|\/\*|<!--)/.test(ln);
+    if (perFile.gateways < PER_FILE_CAP && GATEWAY.some((re) => re.test(ln))) { out.gateways.push({ file: f, line: i + 1, text: clip(ln) }); perFile.gateways++; }
+    if (!noData && perFile.data < PER_FILE_CAP && (DATA.some((re) => re.test(ln)) || (CONFIG_FILE.test(f) && DATA_CONFIG.test(ln)))) { out.data.push({ file: f, line: i + 1, text: clip(ln) }); perFile.data++; }
+    if (perFile.clients < PER_FILE_CAP && !isComment && CLIENT.some((re) => re.test(ln))) { out.clients.push({ file: f, line: i + 1, text: clip(ln) }); perFile.clients++; }
+    for (const re of ENV_READ) for (const m of ln.matchAll(re)) {
+      const name = m[1];
+      if (ENV_SECRET.test(name) || !ENV_ADDRESS.test(name)) continue;
+      out.envs.push({ file: f, line: i + 1, name, text: clip(ln) });
+    }
+    if (!noHosts && !isComment)
+      for (const m of ln.matchAll(URLRE)) {
+        const h = m[1].toLowerCase();
+        if (NOISE_HOSTS.test(h)) continue;
+        out.hosts.push({ file: f, line: i + 1, text: clip(ln), host: h });
+      }
+  });
+  return out;
+}
+
 export function scanRepo(repoPath, { limit = 60 } = {}) {
   const list = execFileSync("git", ["-C", repoPath, "ls-files", "-z"], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 })
     .split("\0").filter(Boolean);
@@ -198,32 +233,11 @@ export function scanRepo(repoPath, { limit = 60 } = {}) {
     if (isConfig) detectManifestLibs(f, text, (l) => libs.add(l));
     for (const [re, label, only] of STD_SERVERS) if (only.test(f) && re.test(text)) libs.add(label);
     for (const re of IMPORT_LIBS) for (const m of text.matchAll(re)) if (LIBS[m[1].toLowerCase()]) libs.add(LIBS[m[1].toLowerCase()]);
-    for (const r of nextRoutes(f, text)) out.routes.push({ file: f, line: r.line, method: r.method, path: r.path, text: `${r.method} ${r.path}  (file-based route)` });
-
-    const lines = text.split("\n");
-    const fileHasMethod = /\.method\b|\bMethod\b/.test(text);
-    const noData = NOISY_DATA_DIR.test(f), noHosts = NOISY_HOST_FILE.test(f);
-    const perFile = { data: 0, clients: 0, gateways: 0 };
-    lines.forEach((ln, i) => {
-      if (ln.length > 600) return;
-      const rt = routeFromLine(f, ln, fileHasMethod);
-      if (rt) out.routes.push({ file: f, line: i + 1, method: rt.method, path: rt.path, text: clip(ln) });
-      const isComment = /^\s*(\/\/|#|\*|\/\*|<!--)/.test(ln);
-      if (perFile.gateways < PER_FILE_CAP && GATEWAY.some((re) => re.test(ln))) { out.gateways.push({ file: f, line: i + 1, text: clip(ln) }); perFile.gateways++; }
-      if (!noData && perFile.data < PER_FILE_CAP && (DATA.some((re) => re.test(ln)) || (CONFIG_FILE.test(f) && DATA_CONFIG.test(ln)))) { out.data.push({ file: f, line: i + 1, text: clip(ln) }); perFile.data++; }
-      if (perFile.clients < PER_FILE_CAP && !isComment && CLIENT.some((re) => re.test(ln))) { out.clients.push({ file: f, line: i + 1, text: clip(ln) }); perFile.clients++; }
-      for (const re of ENV_READ) for (const m of ln.matchAll(re)) {
-        const name = m[1];
-        if (ENV_SECRET.test(name) || !ENV_ADDRESS.test(name) || envs.has(name)) continue;
-        envs.set(name, { file: f, line: i + 1, name, text: clip(ln) });
-      }
-      if (!noHosts && !isComment)
-        for (const m of ln.matchAll(URLRE)) {
-          const h = m[1].toLowerCase();
-          if (NOISE_HOSTS.test(h)) continue;
-          if (!hosts.has(h)) hosts.set(h, { file: f, line: i + 1, text: clip(ln), host: h });
-        }
-    });
+    const lf = fileLeads(f, text);
+    out.routes.push(...lf.routes);
+    out.gateways.push(...lf.gateways); out.data.push(...lf.data); out.clients.push(...lf.clients);
+    for (const e of lf.envs) if (!envs.has(e.name)) envs.set(e.name, e);
+    for (const h of lf.hosts) if (!hosts.has(h.host)) hosts.set(h.host, h);
   }
   out.outbound = [...hosts.values()];
   out.outboundEnv = [...envs.values()];

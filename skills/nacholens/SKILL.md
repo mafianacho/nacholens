@@ -1,7 +1,7 @@
 ---
 name: nacholens
 description: Use when a user wants to SEE what an AI changed in a backend/infra repo without reading code. Builds a use-case flow animation (Claude -> artifact, others -> single HTML) with the changed parts highlighted from a git diff.
-version: 1.3.0
+version: 1.4.0
 ---
 
 # nacholens — show what an AI changed in a backend, without reading code
@@ -16,12 +16,52 @@ You (the agent) write a small **model** of the repo (components, use cases, step
 
 - Needs **Node.js ≥ 20** and **git**. No packages to install.
 - `SV` below means the CLI. Find it in this order: `./cli/src/cli.js` next to this file (installed copy) → `$NACHOLENS_HOME/src/cli.js` → the `src/cli.js` of the nacholens repository. Run it as `node <path>/cli.js <command>`. Without any copy, `npx -y @mafianacho/nacholens@latest <command>` runs the published package (and `… install --to <dir>` puts this file and a CLI copy into `<dir>/nacholens/`).
+- Collection depth (§0.1) needs **nacholens ≥ 0.3.1**: `SV --version` prints it. An older CLI does not know `--depth` (it ignores a `depth` field in the model), so there is no depth check; tell the user to update instead of pretending the check ran.
 - **Try it in 30 seconds**: `SV demo` builds the bundled demo shop (gateway → API → SQLite + 3 third parties, with a real change) into `./nacholens-demo/`.
 - The **target repo is read-only**. Keep the model file outside it (`--model`) unless the user agrees to the default `<repo>/.nacholens/model.json`.
 - Output format: **if you are Claude pass `--agent claude`** (artifact: paste it into the conversation as an HTML artifact); any other agent omits it and gets a single offline HTML file.
 - Quote refs that contain `^` or `~` (`--base 'abc123^'`); `report.json` lists changed steps as `useCase/step` ids: map them to titles with your model when you write the explanation.
 - Command forms: `SV validate [model.json]` and `SV verify --repo R [--model M]` both take the model as a positional argument or `--model`.
 - CLI messages are Korean (validation hints, `TODO` template). File paths, JSON paths and `file:line` are language-neutral; follow them literally. The page's own words are English by default; add `--lang ko` to `build`/`demo` for Korean when the user writes in Korean. The model text (labels, narration) is yours: write it in the user's language.
+
+## 0.1 Pick the depth first — diff, brief or full (nacholens ≥ 0.3.1)
+
+A model always covers *some* part of the repository. Decide how much **before you read code**, write it into the model (`"depth": "brief"`, an optional top-level field) and keep to it. **Say it to the user as depth 1 / 2 / 3, never as the technical name**: 1 = Changes only (`diff`), 2 = Overview (`brief`), 3 = Detailed (`full`). The page chip shows "Depth 2 · Overview". The model and `report.json` store `diff|brief|full`; `--depth` takes `1|2|3` or the names. Depth 1 is not "shallow": it means *limited to the change* (inside that scope it may hold tables and parts). `validate`, `verify` and `build` read the depth from the model and **warn** (exit 0, nothing is blocked) when the model breaks the rules of its depth. `--depth 1|2|3` (or `diff|brief|full`) does the same without the field; if both exist they must agree (otherwise exit 1). A model with no `depth` and no `--depth` is simply not checked, exactly as before.
+
+| Depth | Covers | Leaves out | Size guide | Effort |
+|---|---|---|---|---|
+| `diff` | What a git change touches: the changed use cases, **only their changed steps**, the components those steps pass, the links between them, the tables those steps read or write (and the parts on their `trace`) | Every untouched use case, step, component and table | 1–4 use cases, 1–10 steps in total, 2–6 components, evidence ≈ 10–50 ranges | Minutes. The scan list is the checklist |
+| `brief` | The whole composition: all components, links, the 2–5 **main** use cases (3–8 steps each) and the datastores as components | Drill-down: `parts`, `wires`, `tables` (and columns), `endpoints`, and on steps `trace`, `data`, `endpoints`, `payload`, `transforms` | 4–9 components, 2–5 use cases, ≈ 10–30 steps, evidence ≈ 20–70 ranges | A reading pass over routes, config and connections |
+| `full` | Everything `brief` has plus all detail the schema allows: tables with columns (from migrations), a service's parts and wires, external endpoints, and per step `trace`, `data`, `payload`, `transforms` | Nothing the schema can express, but still only what you read | `brief` plus 6–16 parts per service, a table list per datastore, ≈ 100–250 evidence ranges | Hours on a real service; worth it for the use cases the user cares about |
+
+### Choosing the depth
+
+1. **The user said it** ("just what changed", "overview", "everything, with tables"): use that level.
+2. **Read the request**: a change is named (last N commits, a PR, a branch vs main, "what changed", "what should I re-test") → `diff`. "How does X work", "draw the architecture", "overview of the service" → `brief`. The inside is asked for (tables and columns, internals, every endpoint, the data that moves, "in detail") → `full`.
+3. **Still unclear: do not stop to ask.** Use `diff` when there is a ref range to compare, otherwise `brief`. Say in one line in your report which depth you built and what it leaves out, and offer the next level in the user's words ("this is depth 2, an overview; say \"depth 3\" and I will open the service internals and tables"). Cheap first, deeper on request.
+4. Never silently upgrade: `full` on a large repo costs most of the work. If the request is vague and the repository has many services, build `brief` and offer `full` for the part the user names.
+
+### Collection procedure per depth
+
+**diff** — only what the change touches
+1. `SV scan --repo R --depth diff --base B [--head H]` lists the changed files, their changed lines (head side) and the routes, data accesses and calls **inside** those lines. Tests, docs, lock files and assets are set apart with a reason. That list is the whole scope.
+2. Reuse an existing model of the repo if there is one. Otherwise write a model with only the use cases the changed lines belong to (the route is the `trigger`), only the steps whose code changed, evidence = the changed code (§3.4), the components those steps pass, the links between consecutive stops, only the tables a step's `data` points to, only the parts on a step's `trace`.
+3. Do not add neighbouring steps, components or tables "for context". `SV validate <model> --repo R --base B` warns about every component, link, table, part and step the change does not touch.
+4. `verify`, then `build --repo R --base B --model M`. Changed files no step covers stay under "not in the model": that is the honest remainder.
+
+**brief** — the whole picture, no detail
+1. `SV scan --repo R --depth brief` (25 leads per section; `--limit N` changes it): stack, routes, gateways, data drivers, outbound hosts.
+2. Write components (4–9), links, and 2–5 main use cases of 3–8 steps. A datastore is a component; do not list its tables. A third party is a component; do not list its endpoints.
+3. Leave out `parts`, `wires`, `tables`, `endpoints`, `trace`, `data`, `payload`, `transforms`. `validate` warns for each one that is there.
+4. `verify`, `build`. The page shows `Depth: brief` in the top bar.
+
+**full** — the whole picture and the inside
+1. Do the `brief` pass first and get it through `verify`; the flow model is the frame the detail hangs on.
+2. Add detail in the order of §3.4.1: parts → wires → `trace` → tables and columns (migrations) → `data` → endpoints → `payload` / `transforms`.
+3. `validate` warns about gaps: a datastore without `tables`, a service without `parts` or `wires`, an external without `endpoints`, a call step without `data` / `endpoints`, steps through parts with no `trace`, no `payload` anywhere. Fill a gap only from code you read; if you cannot find it, leave it and say so. Never add an item to quiet a warning.
+4. Going from `brief` to `full`: keep every id, add the detail, change `"depth"`. Going from `diff` to a wider level means a new model: the scope is different.
+
+At the end tell the user the depth and the counts `validate` prints (components, links, use cases, steps, parts, tables, endpoints), and what the depth leaves out.
 
 ## 1. Shortest path — a model already exists
 
@@ -44,7 +84,7 @@ SV build --repo <target repo> --base <ref before the change> [--head <ref>] [--m
 5. `SV verify --repo <repo> --model <file>` until it exits 0 (every evidence range exists in the source at `model.source.commit`).
 6. Run `build` (§1). Read the result to the user (§4).
 
-Budget: a first model for a small service is 15–40 steps. Do not try to cover everything; two good use cases beat ten shallow ones.
+Budget: a first model for a small service is 15–40 steps (`brief` or `full`; a `diff` model is as small as the change). Pick the depth first (§0.1). Do not try to cover everything; two good use cases beat ten shallow ones.
 
 ## 3. Writing the model — the part that decides quality
 
@@ -132,7 +172,7 @@ Evidence is `{file, lines:[start,end], contains}`. After a change, the CLI marks
 
 ### 3.4.1 Optional drill-down detail (parts, wires, tables, endpoints, payload, transforms)
 
-Add this only after the flow model passes `verify`, and only what you read in code. A node without detail stays a plain node; that is fine. Full field list: `docs/model-schema.md` → "Optional drill-down detail".
+This is the detail of the `full` depth (§0.1); a `brief` or `diff`-without-detail model has none of it. Add it only after the flow model passes `verify`, and only what you read in code. A node without detail stays a plain node; that is fine. Full field list: `docs/model-schema.md` → "Optional drill-down detail".
 
 - **Parts** of a service = what a reviewer would name: each route/socket handler, the auth extractor or middleware, each service, each adapter (DB pool, HTTP client). 6–16 parts, not one per function. Cite the declaration line (`pub struct OrderService {`, `app.get("/x"`, `impl Storage for PgStore`). Set `connects` on adapters to the datastore/external they reach.
 - **Wires** = a call you saw from one part to another. Cite the call site (`self.orders.list(`), not the callee. No wire without a call site.
@@ -206,13 +246,14 @@ A first model on a new repo will show warnings. Handle new server-side files fir
 | 3 | `--strict` found changed **code** the model does not cover (style-only files do not count; output is still written) | Add evidence or accept |
 | 4 | `--strict-intent`: at least one planner expectation is unmet (output is still written) | Fix the code, or tell the planner the expectation is not met |
 
-In CI, upload `--out` as an artifact and read `report.json` (`ok`, `unmapped`).
+In CI, upload `--out` as an artifact and read `report.json` (`ok`, `unmapped`, `depth`, `depthWarnings`).
 
 ## 6. Quality bar before you report
 
 - `validate` and `verify` exit 0; `build` exit 0 (or 3 only if the user asked for `--strict`).
 - 2–4 use cases, each 3–10 steps (3 is fine for a tiny service; do not pad), every step with evidence you read; no item cites more than ~3 ranges.
 - No step is a bare restatement of a function name; narration reads fine to a non-developer.
+- The model declares its `depth`, and `validate` printed no depth warning (or you can say why each remaining one is right).
 - You did not touch the target repo (check `git status` there).
 - You can name what you did **not** model.
 - If you added drill-down detail: every part, wire, table, column list and endpoint field came from code you opened, and `verify` covers them (its count includes them).
