@@ -1,0 +1,869 @@
+{
+  "schemaVersion": 1,
+  "depth": "diff",
+  "product": {
+    "id": "demo-shop",
+    "name": "Demo shop",
+    "description": "Browser → gateway → order API → SQLite, with three third-party services. A tiny app that ships with nacholens, so every feature can be tried without a private repository."
+  },
+  "source": {
+    "repo": "demo/shop (built by nacholens demo)",
+    "commit": "e9f308776fd0d64ac269e02a5581415c2dfabf43"
+  },
+  "components": [
+    {
+      "id": "browser",
+      "kind": "client",
+      "label": "Browser\nvanilla JS",
+      "detail": "Static page from public/. Calls the API with same-origin fetch under /api and redirects the user to the login provider.",
+      "evidence": [
+        {
+          "file": "public/app.js",
+          "lines": [
+            6,
+            6
+          ],
+          "contains": "fetch(\"/api\" + path"
+        }
+      ]
+    },
+    {
+      "id": "gateway",
+      "kind": "gateway",
+      "label": "Gateway\nNode http",
+      "detail": "Serves public/ and forwards /api/* to the order API after a per-IP rate limit (120 requests per minute). Adds an x-request-id header.",
+      "evidence": [
+        {
+          "file": "gateway.js",
+          "lines": [
+            10,
+            10
+          ],
+          "contains": "const LIMIT_PER_MINUTE"
+        },
+        {
+          "file": "gateway.js",
+          "lines": [
+            26,
+            26
+          ],
+          "contains": "if (req.url.startsWith(\"/api/\"))"
+        }
+      ]
+    },
+    {
+      "id": "api",
+      "kind": "service",
+      "label": "Order API\nNode http",
+      "detail": "Handles sign-in, orders and the sales report. Every route except the two auth routes needs a valid session cookie; writes check the Origin header.",
+      "evidence": [
+        {
+          "file": "api.js",
+          "lines": [
+            36,
+            36
+          ],
+          "contains": "async function route(req, res)"
+        }
+      ],
+      "parts": [
+        {
+          "id": "orders-get",
+          "label": "GET /api/orders",
+          "role": "route",
+          "detail": "My orders, returned with their delivery status.",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                62,
+                62
+              ],
+              "contains": "if (key === \"GET /api/orders\")"
+            }
+          ]
+        },
+        {
+          "id": "orders-post",
+          "label": "POST /api/orders",
+          "role": "route",
+          "detail": "Creates an order: checks the Origin and the input, then saves it.",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                68,
+                68
+              ],
+              "contains": "if (key === \"POST /api/orders\")"
+            }
+          ]
+        },
+        {
+          "id": "track",
+          "label": "trackShipping",
+          "role": "service",
+          "detail": "Asks the carrier for the status of each order. On failure: unknown.",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                12,
+                18
+              ],
+              "contains": "async function trackShipping(rows)"
+            }
+          ]
+        },
+        {
+          "id": "db-module",
+          "label": "db.js",
+          "role": "adapter",
+          "detail": "Functions that read and write SQLite through node:sqlite.",
+          "evidence": [
+            {
+              "file": "db.js",
+              "lines": [
+                2,
+                5
+              ],
+              "contains": "import { DatabaseSync } from \"node:sqlite\";"
+            }
+          ],
+          "connects": "db"
+        },
+        {
+          "id": "fetch-ext",
+          "label": "fetch(EXTERNAL)",
+          "role": "adapter",
+          "detail": "Calls the external services (sign-in, carrier, analytics) over HTTP. The address is EXTERNAL_URL.",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                6,
+                6
+              ],
+              "contains": "const EXTERNAL = process.env.EXTERNAL_URL"
+            }
+          ]
+        }
+      ],
+      "wires": [
+        {
+          "from": "orders-get",
+          "to": "db-module",
+          "label": "listOrders(email)",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                63,
+                63
+              ],
+              "contains": "const rows = listOrders(me.email);"
+            }
+          ]
+        },
+        {
+          "from": "orders-get",
+          "to": "track",
+          "label": "trackShipping(rows)",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                64,
+                64
+              ],
+              "contains": "const shipping = await trackShipping(rows);"
+            }
+          ]
+        },
+        {
+          "from": "track",
+          "to": "fetch-ext",
+          "label": "GET /track?code=",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                15,
+                15
+              ],
+              "contains": "const r = await fetch(`${EXTERNAL}/track?code="
+            }
+          ]
+        },
+        {
+          "from": "orders-post",
+          "to": "db-module",
+          "label": "insertOrder(...)",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                73,
+                73
+              ],
+              "contains": "const id = insertOrder(me.email"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "db",
+      "kind": "datastore",
+      "label": "SQLite\nnode:sqlite",
+      "detail": "Tables oauth_state, sessions and orders. In memory unless SHOP_DB names a file.",
+      "evidence": [
+        {
+          "file": "db.js",
+          "lines": [
+            8,
+            8
+          ],
+          "contains": "CREATE TABLE IF NOT EXISTS orders"
+        }
+      ],
+      "row": 1,
+      "tables": [
+        {
+          "name": "orders",
+          "detail": "Orders, with the delivery tracking code (tracking).",
+          "columns": [
+            {
+              "name": "id",
+              "type": "INTEGER"
+            },
+            {
+              "name": "email",
+              "type": "TEXT"
+            },
+            {
+              "name": "item",
+              "type": "TEXT"
+            },
+            {
+              "name": "qty",
+              "type": "INTEGER"
+            },
+            {
+              "name": "tracking",
+              "type": "TEXT",
+              "note": "Delivery tracking code"
+            },
+            {
+              "name": "created_at",
+              "type": "INTEGER"
+            }
+          ],
+          "evidence": [
+            {
+              "file": "db.js",
+              "lines": [
+                8,
+                11
+              ],
+              "contains": "CREATE TABLE IF NOT EXISTS orders"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "shipping",
+      "kind": "external",
+      "label": "Shipping tracker\nHTTP JSON",
+      "detail": "Third-party tracking lookup. Called once per order that has a tracking code (v2 and later).",
+      "evidence": [
+        {
+          "file": "api.js",
+          "lines": [
+            12,
+            12
+          ],
+          "contains": "async function trackShipping"
+        }
+      ],
+      "row": 2,
+      "endpoints": [
+        {
+          "id": "track",
+          "method": "GET",
+          "path": "/track?code=",
+          "auth": "None (demo stand-in)",
+          "detail": "Delivery status of a tracking code.",
+          "request": [
+            {
+              "name": "code",
+              "note": "Query"
+            }
+          ],
+          "response": [
+            {
+              "name": "status",
+              "note": "e.g. in_transit"
+            }
+          ],
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                15,
+                16
+              ],
+              "contains": "const r = await fetch(`${EXTERNAL}/track?code="
+            },
+            {
+              "file": "mock-external.js",
+              "lines": [
+                12,
+                12
+              ],
+              "contains": "if (url.pathname === \"/track\")"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "a": "browser",
+      "b": "gateway",
+      "label": "HTTP, same origin /api/*",
+      "evidence": [
+        {
+          "file": "public/app.js",
+          "lines": [
+            6,
+            6
+          ],
+          "contains": "fetch(\"/api\" + path"
+        }
+      ]
+    },
+    {
+      "a": "gateway",
+      "b": "api",
+      "label": "HTTP forward with x-request-id",
+      "evidence": [
+        {
+          "file": "gateway.js",
+          "lines": [
+            27,
+            33
+          ],
+          "contains": "const upstream = await fetch(API + req.url"
+        }
+      ]
+    },
+    {
+      "a": "api",
+      "b": "db",
+      "label": "SQL (node:sqlite)",
+      "evidence": [
+        {
+          "file": "api.js",
+          "lines": [
+            4,
+            4
+          ],
+          "contains": "from \"./db.js\""
+        }
+      ]
+    },
+    {
+      "a": "api",
+      "b": "shipping",
+      "label": "HTTPS: GET /track",
+      "evidence": [
+        {
+          "file": "api.js",
+          "lines": [
+            15,
+            15
+          ],
+          "contains": "fetch(`${EXTERNAL}/track"
+        }
+      ]
+    }
+  ],
+  "useCases": [
+    {
+      "id": "list-orders",
+      "title": "List my orders",
+      "summary": "The page loads the signed-in user's orders. For each order with a tracking code the API asks the shipping tracker for its status.",
+      "trigger": "GET /api/orders",
+      "steps": [
+        {
+          "id": "shipping",
+          "kind": "call",
+          "from": "api",
+          "to": "shipping",
+          "label": "Ask the tracker for each status",
+          "narration": "Orders that have a tracking code are looked up in parallel. A failed lookup becomes \"unknown\" instead of failing the list.",
+          "request": "GET /track?code=TRK-… (one per order)",
+          "response": "{ status } per order",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                12,
+                18
+              ],
+              "contains": "async function trackShipping"
+            }
+          ],
+          "trace": [
+            "api/orders-get",
+            "api/track",
+            "api/fetch-ext"
+          ],
+          "endpoints": [
+            "shipping/track"
+          ],
+          "payload": [
+            {
+              "leg": "request",
+              "format": "http",
+              "title": "GET /track (per order)",
+              "body": "GET <EXTERNAL>/track?code=<tracking, URL-encoded>",
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    15,
+                    15
+                  ],
+                  "contains": "const r = await fetch(`${EXTERNAL}/track?code=${encodeURIComponent(o.tracking)}`)"
+                }
+              ]
+            },
+            {
+              "leg": "response",
+              "format": "json",
+              "title": "shipping status (demo stand-in)",
+              "body": "{ \"status\": \"<text> e.g. in_transit\" }",
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    16,
+                    16
+                  ],
+                  "contains": "return r && r.ok ? (await r.json()).status"
+                }
+              ]
+            }
+          ],
+          "transforms": [
+            {
+              "at": "api/track",
+              "in": {
+                "type": "orders rows",
+                "fields": [
+                  "tracking"
+                ]
+              },
+              "out": {
+                "type": "status strings"
+              },
+              "map": [
+                {
+                  "from": "no tracking",
+                  "to": "\"none\""
+                },
+                {
+                  "from": "reply status",
+                  "to": "status"
+                },
+                {
+                  "from": "call failed",
+                  "to": "\"unknown\""
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    12,
+                    17
+                  ],
+                  "contains": "async function trackShipping(rows) {"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "shape",
+          "kind": "internal",
+          "from": "api",
+          "to": "api",
+          "label": "Build the response",
+          "narration": "Each row becomes { id, item, qty, shipping, createdAt }. The database column names do not leave the server.",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                65,
+                65
+              ],
+              "contains": "orders: rows.map((o, i) =>"
+            }
+          ],
+          "trace": [
+            "api/orders-get"
+          ],
+          "transforms": [
+            {
+              "at": "api/orders-get",
+              "in": {
+                "type": "orders rows + statuses",
+                "fields": [
+                  "id",
+                  "item",
+                  "qty",
+                  "tracking",
+                  "created_at",
+                  "shipping[i]"
+                ]
+              },
+              "out": {
+                "type": "reply orders[]",
+                "fields": [
+                  "id",
+                  "item",
+                  "qty",
+                  "shipping",
+                  "createdAt"
+                ]
+              },
+              "map": [
+                {
+                  "from": "shipping[i]",
+                  "to": "shipping"
+                },
+                {
+                  "from": "created_at",
+                  "to": "createdAt",
+                  "how": "renamed only"
+                },
+                {
+                  "from": "tracking",
+                  "to": "(dropped)",
+                  "how": "not in the reply"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    65,
+                    65
+                  ],
+                  "contains": "return send(res, 200, { orders: rows.map((o, i) =>"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "response",
+          "kind": "response",
+          "from": "api",
+          "via": [
+            "gateway"
+          ],
+          "to": "browser",
+          "label": "Show the list with status",
+          "narration": "The page renders one line per order, including a readable shipping status.",
+          "response": "200 { orders: [{ id, item, qty, shipping, createdAt }] }",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                65,
+                65
+              ],
+              "contains": "return send(res, 200, { orders: rows.map"
+            },
+            {
+              "file": "public/app.js",
+              "lines": [
+                16,
+                16
+              ],
+              "contains": "li.textContent ="
+            },
+            {
+              "file": "gateway.js",
+              "lines": [
+                38,
+                38
+              ],
+              "contains": "return res.end(Buffer.from(await upstream.arrayBuffer()))"
+            }
+          ],
+          "trace": [
+            "api/orders-get"
+          ],
+          "payload": [
+            {
+              "leg": "response",
+              "format": "http",
+              "title": "200 order list",
+              "body": "HTTP 200\ncontent-type: application/json\n\n{ \"orders\": [\n  { \"id\": <int>, \"item\": \"<text>\", \"qty\": <int>,\n    \"shipping\": \"<text>\", \"createdAt\": <int ms> }\n] }",
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    65,
+                    65
+                  ],
+                  "contains": "return send(res, 200, { orders: rows.map((o, i) =>"
+                },
+                {
+                  "file": "api.js",
+                  "lines": [
+                    20,
+                    23
+                  ],
+                  "contains": "const send = (res, code, body, headers = {}) => {"
+                }
+              ]
+            }
+          ],
+          "transforms": [
+            {
+              "at": "api/orders-get",
+              "in": {
+                "type": "reply object"
+              },
+              "out": {
+                "type": "JSON body"
+              },
+              "map": [
+                {
+                  "from": "object",
+                  "to": "JSON.stringify"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    20,
+                    23
+                  ],
+                  "contains": "const send = (res, code, body, headers = {}) => {"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "place-order",
+      "title": "Place an order",
+      "summary": "A signed-in user submits an item and a quantity. The API checks origin and input, stores the order and returns its id.",
+      "trigger": "POST /api/orders",
+      "steps": [
+        {
+          "id": "insert",
+          "kind": "call",
+          "from": "api",
+          "to": "db",
+          "label": "Store the order",
+          "narration": "The order is inserted with the user's email and, from v2 on, a generated tracking code.",
+          "request": "INSERT INTO orders (email, item, qty, tracking, created_at)",
+          "response": "new id",
+          "evidence": [
+            {
+              "file": "api.js",
+              "lines": [
+                73,
+                73
+              ],
+              "contains": "const id = insertOrder("
+            },
+            {
+              "file": "db.js",
+              "lines": [
+                35,
+                38
+              ],
+              "contains": "export function insertOrder"
+            }
+          ],
+          "trace": [
+            "api/orders-post",
+            "api/db-module"
+          ],
+          "data": [
+            {
+              "store": "db",
+              "table": "orders",
+              "op": "insert",
+              "columns": [
+                "email",
+                "item",
+                "qty",
+                "tracking",
+                "created_at"
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    36,
+                    36
+                  ],
+                  "contains": "INSERT INTO orders (email, item, qty, tracking, created_at)"
+                }
+              ]
+            }
+          ],
+          "payload": [
+            {
+              "leg": "request",
+              "format": "sql",
+              "title": "store the order",
+              "body": "INSERT INTO orders (email, item, qty, tracking, created_at)\nVALUES (?, ?, ?, ?, ?)",
+              "bind": [
+                {
+                  "name": "?1 email",
+                  "value": "<email> from the session"
+                },
+                {
+                  "name": "?2 item",
+                  "value": "<text> up to 80 chars"
+                },
+                {
+                  "name": "?3 qty",
+                  "value": "<int 1-99>"
+                },
+                {
+                  "name": "?4 tracking",
+                  "value": "TRK-<8 chars>"
+                },
+                {
+                  "name": "?5 created_at",
+                  "value": "<int> Date.now(), ms"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    36,
+                    36
+                  ],
+                  "contains": "db.prepare(\"INSERT INTO orders (email, item, qty, tracking, created_at) VALUES (?, ?, ?, ?, ?)\")"
+                }
+              ]
+            },
+            {
+              "leg": "response",
+              "format": "row",
+              "title": "insert result",
+              "columns": [
+                {
+                  "name": "lastInsertRowid",
+                  "value": "<int> new order id"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    37,
+                    37
+                  ],
+                  "contains": "return Number(r.lastInsertRowid);"
+                }
+              ]
+            }
+          ],
+          "transforms": [
+            {
+              "at": "api/orders-post",
+              "in": {
+                "type": "validated order",
+                "fields": [
+                  "item",
+                  "qty",
+                  "me.email"
+                ]
+              },
+              "out": {
+                "type": "insertOrder arguments",
+                "fields": [
+                  "email",
+                  "item (cut to 80)",
+                  "qty",
+                  "tracking"
+                ]
+              },
+              "map": [
+                {
+                  "from": "item",
+                  "to": "item.slice(0, 80)"
+                },
+                {
+                  "from": "(nothing)",
+                  "to": "tracking",
+                  "how": "\"TRK-\" + first 8 of randomUUID"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "api.js",
+                  "lines": [
+                    73,
+                    73
+                  ],
+                  "contains": "const id = insertOrder(me.email, body.item.slice(0, 80), body.qty, \"TRK-\" + randomUUID().slice(0, 8));"
+                }
+              ]
+            },
+            {
+              "at": "api/db-module",
+              "in": {
+                "type": "email, item, qty, tracking"
+              },
+              "out": {
+                "type": "orders row → id"
+              },
+              "map": [
+                {
+                  "from": "Date.now()",
+                  "to": "created_at"
+                },
+                {
+                  "from": "lastInsertRowid",
+                  "to": "id",
+                  "how": "Number"
+                }
+              ],
+              "evidence": [
+                {
+                  "file": "db.js",
+                  "lines": [
+                    35,
+                    38
+                  ],
+                  "contains": "export function insertOrder(email, item, qty, tracking) {"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

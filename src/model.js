@@ -4,6 +4,8 @@
 export const KINDS = ["client", "gateway", "service", "datastore", "external"];
 export const STEP_KINDS = ["request", "response", "call", "internal"];
 export const CHANGE_KINDS = ["added", "modified", "removed"];
+// optional collection depth (see src/depth.js): which part of a repository the model covers
+export const DEPTHS = ["diff", "brief", "full"];
 // optional drill-down detail (all fields optional; a model without them renders as before)
 export const PART_ROLES = ["route", "handler", "middleware", "service", "port", "adapter", "job", "module"];
 export const DATA_OPS = ["read", "insert", "update", "upsert", "delete"];
@@ -69,6 +71,7 @@ export function validateModel(model) {
   const errors = [];
   if (!isObj(model)) return ["model: 객체여야 합니다"];
   if (model.schemaVersion !== 1) errors.push("schemaVersion: 1 이어야 합니다");
+  if (model.depth !== undefined && !DEPTHS.includes(model.depth)) errors.push(`depth: ${DEPTHS.join("|")} 중 하나 (선택 필드)`);
 
   const p = model.product;
   if (!isObj(p) || !ID.test(p.id ?? "") || !isStr(p.name, 80) || !isStr(p.description, 400))

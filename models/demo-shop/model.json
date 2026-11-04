@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "depth": "full",
   "product": {
     "id": "demo-shop",
     "name": "Demo shop",

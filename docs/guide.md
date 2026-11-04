@@ -64,6 +64,7 @@ With no model yet, the same command writes an empty template and lists every bla
 | `build <model.json> [--changes c.json]` | Page from a model (and an optional hand-written overlay), no repository needed |
 | `init --repo R` | Empty model template; every blank starts with `TODO` |
 | `scan --repo R [--json] [--limit N]` | **Leads** for drafting a model: stack, routes, gateways, data drivers, outbound hosts, env-injected addresses, HTTP calls |
+| `scan --repo R --depth diff --base B [--head H] [--json]` | **Candidates for a diff-depth model**: changed files, their changed lines, and the routes / data accesses / calls inside those lines |
 | `validate [model] [--changes c]` | Schema check; for a template, the remaining `TODO`s |
 | `verify [model] (--repo R [--ref X] \| --source DIR)` | Every evidence range exists in the source (reads `git show`, no checkout needed) |
 | `diff --repo R --base B [--head H] [--out c.json] [--strict]` | Only the change overlay |
@@ -72,8 +73,44 @@ With no model yet, the same command writes an empty template and lists every bla
 | `impact --repo R --base B` | Regression map: use cases to re-check (direct, or sharing a changed table / endpoint / part) and whether a test mentions them |
 
 Review options for `build`: `--before-model <file>` (model written against the base commit; compares the flow itself) and `--intent <intent.json>`. See [`review.md`](review.md).
+Depth: `--depth diff|brief|full` on `scan`, `validate`, `verify`, `build` (see below). `nacholens --version` prints the CLI version.
 Common options: `--model <file>` (default `<repo>/.nacholens/model.json`), `--out <dir>` (default `./nacholens-out`), `--format html\|artifact\|both\|auto`, `--agent <name>` or `NACHOLENS_AGENT`, `--lang en\|ko` (the page's own words; default `en`), `--strict`.
 **The analysed repository is only read.** The CLI writes `--out` and the model file; keep the model outside the repo with `--model`.
+
+## Collection depth: diff, brief, full
+
+Before a model is written, decide **how much of the repository it covers**. Three depths, one optional field `"depth"` in the model and the same word in `--depth`:
+
+| | `diff` | `brief` | `full` |
+|---|---|---|---|
+| Question it answers | "What did this change touch?" | "How is this service put together?" | "Show me the inside: tables, parts, endpoints, data" |
+| Use cases | only the changed ones, only their changed steps | the 2–5 main ones, 3–8 steps each | as many as you care about, 5–10 steps each |
+| Components | those the changed steps pass | all of them (datastores included) | all of them |
+| Detail (parts, wires, tables + columns, endpoints, trace, data, payload, transforms) | only for what the changed steps pass | none | all of it |
+| Typical size | 1–4 use cases, 1–10 steps | 4–9 components, ≈ 10–30 steps | brief + 6–16 parts per service, tables with columns, ≈ 100–250 evidence ranges |
+| Needs | `--repo` + `--base` | nothing but the repository | nothing but the repository, and the most reading |
+
+If you name no depth, the agent picks by your request (a change is named → `diff`; "how does X work" → `brief`; "in detail, with tables" → `full`; unclear → `diff` when there is a ref range, otherwise `brief`), builds without asking, and tells you which one it built and what is left out. Say "full" or "diff" afterwards to go deeper or narrower.
+
+Example commands (`SV` = `node src/cli.js`):
+
+```bash
+# diff: what to model for this change (candidates, not facts), then check and build
+SV scan --repo ~/work/my-api --depth diff --base main
+SV validate my-api.model.json --repo ~/work/my-api --base main     # warns about anything outside the change
+SV build    --repo ~/work/my-api --base main --model my-api.model.json
+
+# brief: the whole picture, no detail
+SV scan --repo ~/work/my-api --depth brief
+SV validate my-api.model.json --depth brief                        # warns about parts / tables / trace ...
+SV build    --repo ~/work/my-api --base main --model my-api.model.json --depth brief
+
+# full: everything the schema holds
+SV validate my-api.model.json --depth full                         # warns about tables, parts, endpoints that are missing
+SV verify   my-api.model.json --repo ~/work/my-api --depth full
+```
+
+The depth rules only **warn** (exit code 0): a model that ignores them is still a valid model. A model with no `depth` and no `--depth` is not checked. `build` shows `Depth: <level>` in the top bar and writes `depth` and `depthWarnings` to `report.json`. The demo shop ships all three (`models/demo-shop/model.json` = full, `model.brief.json`, `model.diff.json`); on the demo change they hold 7 / 7 / 5 components and 27 / 27 / 4 steps. Format details: [`model-schema.md`](model-schema.md#optional-depth-collection-depth).
 
 ## How the change overlay works
 

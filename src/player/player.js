@@ -77,6 +77,7 @@
     backStep: function (n) { return "← " + n + "단계 설명으로"; }, backOverview: "← 흐름 개요로", insideOf: function (k, x) { return k + " · " + x + " 내부"; }, noDetail: "설명이 모델에 없습니다.",
     newHere: "이번 작업에서 새로 생겼습니다", changedHere: "이번 작업에서 근거 코드가 바뀌었습니다", calledBy: "이 부품을 부르는 곳", calls: "이 부품이 부르는 곳", auth: "인증",
     stepsHere: "이 흐름에서 지나는 단계", stepN: function (n) { return n + "단계"; },
+    depthWord: "수준", depthHint: { diff: "변경이 닿는 부분만 모델링", brief: "전체 구성만, 세부 없음", full: "전체 구성과 세부까지" },
     lgReq: "요청이 이동 (주황 점)", lgRes: "응답이 돌아옴 (먹색 점)", lgWork: "컴포넌트 안에서 처리 중", lgPast: "이미 지나간 길", lgChanged: "이번 작업으로 생기거나 바뀐 것",
     lgOpen: "상자를 누르면 내부로 들어가 같은 흐름을 봅니다", lgInt: "내부: 부품 사이 호출 (초록 점)",
     ui: { overlay: "변경 강조", nav: "흐름과 단계", search: "흐름 검색", stage: "데이터 흐름 애니메이션", canvas: "아키텍처와 요청 흐름", transport: "재생 제어", review: "검토", insp: "현재 단계 설명" }
@@ -103,6 +104,7 @@
     backStep: function (n) { return "← Back to step " + n; }, backOverview: "← Back to the flow overview", insideOf: function (k, x) { return k + " · inside " + x; }, noDetail: "The model has no description.",
     newHere: "New in this work", changedHere: "Its evidence code changed in this work", calledBy: "Called by", calls: "Calls", auth: "Authentication",
     stepsHere: "Steps of this flow that pass here", stepN: function (n) { return "Step " + n; },
+    depthWord: "Depth", depthHint: { diff: "Only the parts the change touches", brief: "The whole composition, no detail", full: "The whole composition and its detail" },
     lgReq: "A request moves (orange dot)", lgRes: "The response comes back (ink dot)", lgWork: "Working inside a component", lgPast: "Path already taken", lgChanged: "Added or changed in this work",
     lgOpen: "Click a box to see the same flow inside it", lgInt: "Inside: a call between parts (green dot)",
     ui: null
@@ -816,6 +818,8 @@
     var g = changes && changes.generated, ref = $("sv-ref");
     ref.hidden = !g; ref.textContent = g && g.base && g.head ? g.base.slice(0, 7) + " → " + g.head.slice(0, 7) : "";
     $("sv-commit").textContent = changes ? changes.title : model.product.description;
+    var dp = $("sv-depth");
+    if (dp) { dp.hidden = !model.depth; dp.textContent = model.depth ? W.depthWord + ": " + model.depth : ""; dp.title = model.depth ? W.depthHint[model.depth] || "" : ""; }
     var t = $("sv-overlay"); t.hidden = !changes; t.setAttribute("aria-checked", S.overlay ? "true" : "false");
     if (doc.title !== undefined) doc.title = model.product.name + " · Nacholens";
   }

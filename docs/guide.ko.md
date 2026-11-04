@@ -68,6 +68,41 @@ nacholens impact --repo R --base B --model M
 
 `--strict-intent` 에서 미충족 기대사항이 있으면 종료 코드 4.
 
+## 수집 수준: diff · brief · full
+
+모델을 쓰기 전에 **저장소의 어디까지 담을지**를 정합니다. 수준은 세 가지이고, 모델의 선택 필드 `"depth"` 와 `--depth` 옵션이 같은 말을 씁니다.
+
+| | `diff` | `brief` | `full` |
+|---|---|---|---|
+| 답하는 질문 | "이번 변경이 어디를 건드렸나?" | "이 서비스는 어떻게 짜여 있나?" | "안쪽을 보여 줘: 테이블·부품·엔드포인트·데이터" |
+| 유즈케이스 | 바뀐 것만, 바뀐 단계만 | 주요 2~5개, 각 3~8단계 | 필요한 만큼, 각 5~10단계 |
+| 컴포넌트 | 바뀐 단계가 지나는 것 | 전부 (저장소 포함) | 전부 |
+| 세부 (parts·wires·tables와 columns·endpoints·trace·data·payload·transforms) | 바뀐 단계가 지나는 것만 | 없음 | 전부 |
+| 분량 | 유즈케이스 1~4개, 단계 1~10개 | 컴포넌트 4~9개, 단계 약 10~30개 | brief + 서비스당 parts 6~16개, column 있는 tables, 근거 약 100~250건 |
+| 필요한 것 | `--repo` + `--base` | 저장소만 | 저장소만, 읽을 양이 가장 많음 |
+
+수준을 말하지 않으면 에이전트가 요청을 보고 고릅니다(변경을 말하면 `diff`, "어떻게 동작해?"는 `brief`, "테이블까지 자세히"는 `full`, 불분명하면 비교할 ref 가 있을 때 `diff`, 없으면 `brief`). 묻지 않고 만든 뒤 어느 수준으로 만들었고 무엇이 빠졌는지 알려 줍니다. 더 깊게/좁게 보려면 "full 로" "diff 로"라고 말하면 됩니다.
+
+예시 명령 (`SV` = `node src/cli.js`):
+
+```bash
+# diff: 이번 변경에 모델링할 것(후보이지 사실이 아님) → 검사 → 빌드
+SV scan --repo ~/work/my-api --depth diff --base main
+SV validate my-api.model.json --repo ~/work/my-api --base main     # 변경 밖의 것이 있으면 경고
+SV build    --repo ~/work/my-api --base main --model my-api.model.json
+
+# brief: 세부 없는 전체 그림
+SV scan --repo ~/work/my-api --depth brief
+SV validate my-api.model.json --depth brief                        # parts·tables·trace 등이 있으면 경고
+SV build    --repo ~/work/my-api --base main --model my-api.model.json --depth brief
+
+# full: 스키마가 담는 것 전부
+SV validate my-api.model.json --depth full                         # 빠진 tables·parts·endpoints 를 경고
+SV verify   my-api.model.json --repo ~/work/my-api --depth full
+```
+
+수준 규칙은 **경고만** 합니다(종료 코드 0). 규칙을 어겨도 모델은 유효합니다. 모델에 `depth` 도 없고 `--depth` 도 없으면 검사하지 않습니다. `build` 는 상단 바에 `수준: <level>` 을 보여 주고 `report.json` 에 `depth`·`depthWarnings` 를 씁니다. 데모 쇼핑몰에 세 수준이 모두 있습니다(`models/demo-shop/model.json` = full, `model.brief.json`, `model.diff.json`). 데모 변경에서 컴포넌트는 7 / 7 / 5개, 단계는 27 / 27 / 4개입니다. 형식: [`model-schema.md`](model-schema.md#optional-depth-collection-depth).
+
 ## 종료 코드
 
 | 코드 | 뜻 |

@@ -61,14 +61,14 @@ function clock() {
   };
 }
 
-const IDS = ["app", "sv-model", "sv-changes", "sv-review-data", "sv-product", "sv-ref", "sv-commit", "sv-overlay", "sv-q", "sv-list", "sv-stage", "sv-crumbs", "sv-caption", "sv-canvas", "sv-transport", "sv-review", "sv-insp"];
+const IDS = ["app", "sv-model", "sv-changes", "sv-review-data", "sv-product", "sv-ref", "sv-depth", "sv-commit", "sv-overlay", "sv-q", "sv-list", "sv-stage", "sv-crumbs", "sv-caption", "sv-canvas", "sv-transport", "sv-review", "sv-insp"];
 // lang: most tests read the Korean words (the --lang ko build); the English default has its own tests
 function load({ model = demoModel(), changes = demoAutoChanges(), review = null, target = "html", hash = "", reduce = true, stage = [900, 520], storage = "memory", lang = "ko" } = {}) {
   const html = buildPage(model, changes, { target, review, lang });
   const scripts = [...html.matchAll(/<script[^>]*>([^]*?)<\/script>/g)].map((m) => m[1]);
   const byId = {};
   for (const id of IDS) { byId[id] = new El(id === "sv-canvas" ? "svg" : "div"); byId[id].attrs.id = id; }
-  for (const id of ["sv-ref", "sv-overlay", "sv-crumbs", "sv-review"]) byId[id].hidden = true;
+  for (const id of ["sv-ref", "sv-depth", "sv-overlay", "sv-crumbs", "sv-review"]) byId[id].hidden = true;
   byId["sv-model"]._text = scripts[0]; byId["sv-changes"]._text = scripts[1]; byId["sv-review-data"]._text = scripts[2];
   [byId["sv-stage"].clientWidth, byId["sv-stage"].clientHeight] = stage;
   const docListeners = {}, hist = [], ck = clock(), mem = {};
@@ -453,4 +453,19 @@ test("the demo model itself renders every flow and every inside without errors",
     for (const c of demoModel().components.filter((x) => x.parts || x.tables || x.endpoints)) { sv.openDetail(c.id); for (let i = 0; i < u.steps.length; i++) sv.go(i, true); sv.closeDetail(); }
   }
   assert.equal(sv.state.mode, "arch");
+});
+
+test("the top bar shows the model's depth as a chip, in both languages; no depth, no chip", () => {
+  const withDepth = (depth) => ({ ...demoModel(), depth });
+  const ko = load({ model: withDepth("brief") }).byId["sv-depth"];
+  assert.equal(ko.hidden, false);
+  assert.equal(ko.textContent, "수준: brief");
+  assert.equal(ko.title, "전체 구성만, 세부 없음");
+  const en = load({ model: withDepth("diff"), lang: "en" }).byId["sv-depth"];
+  assert.equal(en.textContent, "Depth: diff");
+  assert.equal(en.title, "Only the parts the change touches");
+  assert.equal(load({ model: withDepth("full"), lang: "en" }).byId["sv-depth"].title, "The whole composition and its detail");
+  const none = load({ model: tiny(), changes: null }).byId["sv-depth"];
+  assert.equal(none.hidden, true);
+  assert.equal(none.textContent, "");
 });
