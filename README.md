@@ -1,5 +1,7 @@
 # nacholens
 
+[![npm version](https://img.shields.io/npm/v/@mafianacho/nacholens)](https://www.npmjs.com/package/@mafianacho/nacholens) [![CI](https://github.com/mafianacho/nacholens/actions/workflows/ci.yml/badge.svg)](https://github.com/mafianacho/nacholens/actions/workflows/ci.yml) [![License: Apache-2.0](https://img.shields.io/npm/l/@mafianacho/nacholens)](LICENSE)
+
 **English** · [日本語](README.ja.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [中文](README.zh.md) · [한국어](README.ko.md)
 
 See what an AI changed in a backend, without reading code. nacholens turns a repository into one page: pick a use case and watch the request move from the client through your services, database and third parties, with the changed parts highlighted from `git diff`.
