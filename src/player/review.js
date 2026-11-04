@@ -40,7 +40,7 @@
     showMet: function (n, open) { return "충족 " + n + "건 " + (open ? "접기" : "보기"); },
     uncovered: function (n) { return "기획에 연결되지 않은 변경 " + n + "건 — 범위 이탈인지 판단"; }, scopeOk: "범위 확인함", checked: "확인함",
     unprovable: "모델로 증명할 수 없음 — 사람이 직접 확인", touched: "이번 변경이 건드림",
-    noImpact: "저장소와 기준 커밋을 주면 다시 테스트할 흐름을 계산합니다 (build --repo --base).", qImpact: "무엇을 다시 테스트하나요?",
+    noImpact: "저장소와 기준 커밋을 주면 다시 테스트할 흐름을 계산합니다 (build --repo --base).", qImpact: "무엇을 다시 테스트하나요?", noChangedSteps: "바뀐 단계가 없어 다시 테스트할 흐름이 없습니다",
     sumImpact: function (m) { return "직접 " + m.direct + " · 간접 " + m.indirect + " · 테스트 못 찾음 " + m.withoutTests + (m.testsKnown ? " — 테스트 파일이 경로를 언급하는지로만 찾습니다" : " — 테스트는 저장소를 읽지 않아 확인하지 않았습니다"); },
     tested: "테스트함", why: { table: "테이블 ", endpoint: "외부 호출 ", part: "부품 ", wire: "배선 " },
     changedSteps: function (n) { return "바뀐 단계 " + n; }, testFiles: function (n) { return "테스트 " + n + "개"; }, testFilesLabel: "테스트 파일", kindLabel: "종류",
@@ -59,7 +59,7 @@
     showMet: function (n, open) { return (open ? "Hide " : "Show ") + n + " met"; },
     uncovered: function (n) { return n + (n === 1 ? " change is" : " changes are") + " not linked to the plan: is it out of scope?"; }, scopeOk: "Scope checked", checked: "Checked",
     unprovable: "The model cannot prove this: a person has to check", touched: "Touched by this change",
-    noImpact: "Pass the repository and a base commit to find the flows to retest (build --repo --base).", qImpact: "What should be retested?",
+    noImpact: "Pass the repository and a base commit to find the flows to retest (build --repo --base).", qImpact: "What should be retested?", noChangedSteps: "No changed steps, so nothing needs re-testing",
     sumImpact: function (m) { return "Direct " + m.direct + " · Indirect " + m.indirect + " · No test found " + m.withoutTests + (m.testsKnown ? ": tests are found only by the paths they mention" : ": tests were not checked because the repository was not read"); },
     tested: "Tested", why: { table: "table ", endpoint: "call ", part: "part ", wire: "wire " },
     changedSteps: function (n) { return n + (n === 1 ? " changed step" : " changed steps"); }, testFiles: function (n) { return n + (n === 1 ? " test" : " tests"); }, testFilesLabel: "Test files", kindLabel: "Kind",
@@ -123,7 +123,8 @@
   /* ── state ── */
   var hashTab = api && api.hash ? api.hash.dock : null, T0 = tracks();
   var avail = T0.filter(function (t) { return t.avail; });
-  var S = { tab: (T0.filter(function (t) { return t.id === hashTab && t.avail; })[0] || avail.filter(function (t) { return left(t); })[0] || avail[0]).id, collapsed: false, showMet: false, open: {}, ucat: "code" };
+  var nothing = avail.every(function (t) { return t.items.length === 0; }); // nothing to check anywhere: the dock starts folded and gives the room to the stage
+  var S = { tab: (T0.filter(function (t) { return t.id === hashTab && t.avail; })[0] || avail.filter(function (t) { return left(t); })[0] || avail[0]).id, collapsed: nothing && !hashTab, showMet: false, open: {}, ucat: "code" };
 
   /* ── tab bodies ── */
   function head(q, sub, extra) { return h("div", { "class": "dhead" }, h("span", { "class": "q kr", text: q }), sub ? h("span", { "class": "sub kr", text: sub }) : null, h("span", { "class": "grow" }), extra || null); }
@@ -160,7 +161,7 @@
     var M = data.impact;
     if (!M) { put(b, h("div", { "class": "empty kr", text: L.noImpact })); return; }
     var sm = M.summary;
-    put(b, head(L.qImpact, L.sumImpact(sm)));
+    put(b, head(L.qImpact, !M.useCases.length && !sm.direct && !sm.indirect && !sm.withoutTests ? L.noChangedSteps : L.sumImpact(sm))); // nothing changed: say so, not 0 · 0 · 0
     put(b, h("ul", { "class": "rowlist" }, M.useCases.map(function (u) {
       var key = "rt:" + u.id, open = !!S.open[key], files = (u.tests && u.tests.files) || [];
       return h("li", { "class": "ri" + (done[key] ? " done" : "") }, checkbox(key, L.tested),

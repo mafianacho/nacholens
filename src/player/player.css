@@ -83,6 +83,7 @@ button { cursor: pointer; }
 .mono { font-family: var(--mono); }
 .kr { word-break: keep-all; overflow-wrap: anywhere; }
 .ell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ell2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; } /* two lines, then the full text is in the tooltip */
 svg.i { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
 /* ═════════════════ 3. Components ═════════════════ */
@@ -169,7 +170,7 @@ svg.i { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none;
 .st .n { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 600; color: var(--text-3); background: var(--surface); border: 1px solid var(--border-strong); flex: none; position: relative; z-index: 1; font-variant-numeric: tabular-nums; transition: background var(--t-base), color var(--t-base), border-color var(--t-base); }
 .st.done .n { background: var(--sunken); }
 .st[aria-current="step"] .n { background: var(--accent); border-color: var(--on-accent); color: var(--on-accent); }
-.st .lbl { flex: 1; min-width: 0; }
+.st .lbl { flex: 1; min-width: 0; line-height: 1.35; }
 .st .chg { font-size: 11px; font-weight: 600; color: var(--t); flex: none; }
 .st .check { width: 16px; height: 16px; }
 
@@ -267,9 +268,13 @@ svg.i { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none;
 /* ═════════════════ 7. Transport ═════════════════ */
 .transport { display: flex; align-items: center; gap: var(--s2); padding: var(--s2) var(--s4); border-top: 1px solid var(--border); background: var(--surface); min-width: 0; }
 .scrub { flex: 1; display: flex; gap: 3px; min-width: 120px; height: 28px; align-items: center; }
-.seg-step { flex: 1; height: 6px; border-radius: 1px; background: var(--sunken); border: 0; padding: 0; position: relative; overflow: hidden; transition: height var(--t-fast); }
-.seg-step:hover { height: 10px; }
-.seg-step i { position: absolute; top: 0; bottom: 0; left: 0; width: 0; background: var(--accent); border-radius: 1px; }
+.seg-step { flex: 1; height: 22px; background: none; border: 0; padding: 0; position: relative; }
+.seg-step::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 6px; margin-top: -3px; border-radius: 2px; background: var(--sunken); transition: height var(--t-fast), margin-top var(--t-fast); }
+.seg-step.chg::before { background: var(--success-border); }
+.seg-step:hover::before, .seg-step.cur::before { height: 10px; margin-top: -5px; }
+.seg-step.cur::before { outline: 1.5px solid var(--accent-line); outline-offset: 1px; }
+.seg-step i { position: absolute; left: 0; top: 50%; height: 6px; margin-top: -3px; width: 0; background: var(--accent); border-radius: 2px; transition: height var(--t-fast), margin-top var(--t-fast); }
+.seg-step:hover i, .seg-step.cur i { height: 10px; margin-top: -5px; }
 .seg-step.done i { width: 100%; background: var(--accent-done); }
 .counter { font-size: var(--fs-sm); color: var(--text-2); font-variant-numeric: tabular-nums; min-width: 44px; text-align: right; }
 
@@ -316,3 +321,18 @@ svg.i { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none;
   .topbar .commit { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* phones: nothing may be wider than the screen. The top bar gives up its words before its controls; the transport wraps. */
+@media (max-width: 700px) {
+  .app, .body > * { max-width: 100vw; }
+  .topbar { gap: var(--s2); padding: 0 var(--s3); }
+  .brand { font-size: 0; gap: 0; }
+  .topbar .sep, .topbar .grow { display: none; }
+  .topbar .product { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .topbar .ref { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .topbar .switch { flex: none; }
+  .transport { flex-wrap: wrap; padding: var(--s2) var(--s3); }
+  .scrub { order: 5; flex-basis: 100%; min-width: 0; }
+  .counter { margin-left: auto; }
+  .dtabs { max-width: 100vw; }
+}

@@ -471,6 +471,84 @@ test("the top bar shows the model's depth as a chip, in both languages; no depth
   assert.equal(none.textContent, "");
 });
 
+/* ───────── 0.3.3: nothing changed, long labels, progress bar, phones ───────── */
+const unchanged = (base = "abcdef1234567", head = "abcdef1234567") => ({ title: "no change", summary: "Nothing changed in this range.", ref: "x", components: [], steps: [], details: [], unmapped: [], ignored: [], generated: { by: "nacholens diff", base, head, modelCommit: head, lineTranslation: false } });
+
+test("nothing changed: the range says so, the highlight switch is off, every flow is listed open (not hidden in a fold)", () => {
+  const { byId } = load({ changes: unchanged(), lang: "en" });
+  assert.equal(byId["sv-ref"].textContent, "abcdef1 · No changes");
+  assert.equal(byId["sv-overlay"].getAttribute("disabled"), "");
+  const groups = byId["sv-list"].all(has("gh"));
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0].getAttribute("aria-expanded"), "true");
+  assert.equal(byId["sv-list"].all(has("uc")).length, demoModel().useCases.length);
+  const ko = load({ changes: unchanged() }).byId["sv-ref"].textContent;
+  assert.equal(ko, "abcdef1 · 변경 없음");
+});
+
+test("a real range keeps its arrow and the highlight switch stays usable", () => {
+  const { byId } = load({ lang: "en" });
+  assert.match(byId["sv-ref"].textContent, / → /);
+  assert.equal(byId["sv-overlay"].getAttribute("disabled"), null);
+});
+
+test("nothing changed: the review dock is folded and says there is nothing to re-test instead of 0/0/0", () => {
+  const model = demoModel(), changes = unchanged();
+  const review = buildReview(model, changes, {});
+  const { rv, byId } = load({ model, changes, review, lang: "en" });
+  assert.equal(rv.state.collapsed, true);
+  rv.open("impact");
+  const text = byId["sv-review"].textContent;
+  assert.doesNotMatch(text, /Direct 0 · Indirect 0/);
+  assert.match(text, /No changed steps/);
+});
+
+test("a flow that is selected stays visible even when its group is folded; search also finds step names", () => {
+  const { sv, byId } = load();
+  const same = demoModel().useCases.map((u) => u.id).find((id) => !byId["sv-list"].all(has("uc")).some((b) => b.getAttribute("data-uc") === id));
+  sv.selectUseCase(same);
+  assert.ok(byId["sv-list"].all(has("uc")).some((b) => b.getAttribute("data-uc") === same), "current flow is listed");
+  const label = demoModel().useCases.find((u) => u.id === same).steps[1].label;
+  byId["sv-q"].fire("input", { target: { value: label.toLowerCase() } });
+  assert.ok(byId["sv-list"].all(has("uc")).some((b) => b.getAttribute("data-uc") === same), "found by a step name");
+});
+
+test("long names are never silently cut: the label, the route and the caption carry the full text as a tooltip", () => {
+  const { sv, byId } = load();
+  sv.selectUseCase("list-orders");
+  const lbl = byId["sv-list"].all(has("lbl"))[0];
+  assert.ok(lbl.getAttribute("title") && lbl.getAttribute("title") === lbl.textContent);
+  const m = byId["sv-list"].all(has("m"))[0];
+  assert.equal(m.getAttribute("title"), m.textContent);
+  sv.go(0, true);
+  const txt = byId["sv-caption"].find(has("txt"));
+  assert.equal(txt.getAttribute("title"), txt.textContent);
+});
+
+test("progress bar: a mark on changed steps, the current step is marked, each segment names its step", () => {
+  const { sv, byId } = load();
+  sv.selectUseCase("list-orders");
+  sv.go(1, false);
+  const segs = byId["sv-transport"].find(has("scrub")).children;
+  const u = demoModel().useCases.find((x) => x.id === "list-orders");
+  assert.equal(segs.length, u.steps.length);
+  const chg = demoAutoChanges().steps.filter((c) => c.useCase === "list-orders").map((c) => c.step);
+  u.steps.forEach((st, i) => {
+    assert.equal(segs[i].classList.contains("chg"), chg.includes(st.id), "changed mark on " + st.id);
+    assert.equal(segs[i].classList.contains("cur"), i === 1, "current mark on " + st.id);
+    assert.ok(segs[i].getAttribute("title").startsWith((i + 1) + ". " + st.label));
+  });
+  assert.equal(segs[1].getAttribute("aria-current"), "step");
+});
+
+test("phones: below 700px the top bar and the transport wrap instead of widening the page", () => {
+  const html = buildPage(demoModel(), demoAutoChanges(), { target: "html", lang: "en" });
+  const css = html.match(/@media \(max-width: 700px\) \{[^]*?\n\}/)?.[0] ?? "";
+  assert.match(css, /\.transport \{[^}]*flex-wrap: wrap/);
+  assert.match(css, /\.topbar [^{]*\{[^}]*min-width: 0/);
+  assert.match(css, /\.scrub \{[^}]*flex-basis: 100%/);
+});
+
 /* ───────── wires: routed around boxes, never under them ───────── */
 const geom = (byId) => {
   const boxes = byId["sv-canvas"].all((e) => e.attrs["data-id"] && e.find((c) => c.tagName === "rect")).map((g) => { const r = g.find((c) => c.tagName === "rect"); return { id: g.attrs["data-id"], x0: +r.attrs.x, y0: +r.attrs.y, x1: +r.attrs.x + +r.attrs.width, y1: +r.attrs.y + +r.attrs.height }; });
