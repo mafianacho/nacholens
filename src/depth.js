@@ -5,18 +5,30 @@
 // `depth` is an optional model field. A model without it behaves exactly as before; nothing here
 // ever fails a build. The checks return warnings (and notes), never errors: a model that does not
 // follow its declared depth is still a valid model.
-import { DEPTHS } from "./model.js";
+import { DEPTHS, DEPTH_LEVELS, DEPTH_LABELS } from "./model.js";
 import { parseDiff, ignoreReason, unmappedCategory } from "./diff.js";
 import { fileLeads } from "./scan.js";
 
-export { DEPTHS };
+export { DEPTHS, DEPTH_LEVELS, DEPTH_LABELS };
+
+/** "1"|"2"|"3" or diff|brief|full (any case) -> the stored name; undefined stays undefined; anything else is a usage error */
+export function normalizeDepth(v) {
+  if (v === undefined) return undefined;
+  const s = String(v).trim().toLowerCase();
+  const byNumber = DEPTHS.find((d) => String(DEPTH_LEVELS[d]) === s);
+  if (byNumber) return byNumber;
+  if (DEPTHS.includes(s)) return s;
+  throw new Error(`--depth 은 1|2|3 (= ${DEPTHS.map((d) => `${DEPTH_LEVELS[d]} ${DEPTH_LABELS[d]}`).join(" · ")}) 또는 ${DEPTHS.join("|")} 중 하나여야 합니다 (받은 값: ${JSON.stringify(v)})`);
+}
+/** "깊이 2 · 한눈에 (brief)" */
+export const depthName = (d) => `깊이 ${DEPTH_LEVELS[d]} · ${DEPTH_LABELS[d]} (${d})`;
 
 const STEP_DETAIL = ["trace", "data", "endpoints", "payload", "transforms"];
 const COMPONENT_DETAIL = ["parts", "wires", "tables", "endpoints"];
 
 /** `--depth` value + the model's declared depth -> { depth, error }. A flag that contradicts the model is an error. */
 export function resolveDepth(model, flag) {
-  if (flag !== undefined && !DEPTHS.includes(flag)) throw new Error(`--depth 은 ${DEPTHS.join("|")} 중 하나여야 합니다 (받은 값: ${JSON.stringify(flag)})`);
+  flag = normalizeDepth(flag);
   const declared = model?.depth;
   if (flag !== undefined && declared !== undefined && declared !== flag)
     return { depth: null, error: `모델은 depth "${declared}" 로 선언되어 있는데 --depth ${flag} 가 지정됐습니다. 맞는 쪽을 고르세요 (모델의 depth 를 고치거나 --depth 를 빼세요)` };

@@ -26,7 +26,7 @@ You (the agent) write a small **model** of the repo (components, use cases, step
 
 ## 0.1 Pick the depth first — diff, brief or full (nacholens ≥ 0.3.1)
 
-A model always covers *some* part of the repository. Decide how much **before you read code**, write it into the model (`"depth": "brief"`, an optional top-level field) and keep to it. `validate`, `verify` and `build` read the depth from the model and **warn** (exit 0, nothing is blocked) when the model breaks the rules of its depth. `--depth diff|brief|full` does the same without the field; if both exist they must agree (otherwise exit 1). A model with no `depth` and no `--depth` is simply not checked, exactly as before.
+A model always covers *some* part of the repository. Decide how much **before you read code**, write it into the model (`"depth": "brief"`, an optional top-level field) and keep to it. **Say it to the user as depth 1 / 2 / 3, never as the technical name**: 1 = Changes only (`diff`), 2 = Overview (`brief`), 3 = Detailed (`full`). The page chip shows "Depth 2 · Overview". The model and `report.json` store `diff|brief|full`; `--depth` takes `1|2|3` or the names. Depth 1 is not "shallow": it means *limited to the change* (inside that scope it may hold tables and parts). `validate`, `verify` and `build` read the depth from the model and **warn** (exit 0, nothing is blocked) when the model breaks the rules of its depth. `--depth 1|2|3` (or `diff|brief|full`) does the same without the field; if both exist they must agree (otherwise exit 1). A model with no `depth` and no `--depth` is simply not checked, exactly as before.
 
 | Depth | Covers | Leaves out | Size guide | Effort |
 |---|---|---|---|---|
@@ -38,7 +38,7 @@ A model always covers *some* part of the repository. Decide how much **before yo
 
 1. **The user said it** ("just what changed", "overview", "everything, with tables"): use that level.
 2. **Read the request**: a change is named (last N commits, a PR, a branch vs main, "what changed", "what should I re-test") → `diff`. "How does X work", "draw the architecture", "overview of the service" → `brief`. The inside is asked for (tables and columns, internals, every endpoint, the data that moves, "in detail") → `full`.
-3. **Still unclear: do not stop to ask.** Use `diff` when there is a ref range to compare, otherwise `brief`. Say in one line in your report which depth you built and what it leaves out, and offer the next level ("this is a brief model; I can open the service internals and tables as a full one"). Cheap first, deeper on request.
+3. **Still unclear: do not stop to ask.** Use `diff` when there is a ref range to compare, otherwise `brief`. Say in one line in your report which depth you built and what it leaves out, and offer the next level in the user's words ("this is depth 2, an overview; say \"depth 3\" and I will open the service internals and tables"). Cheap first, deeper on request.
 4. Never silently upgrade: `full` on a large repo costs most of the work. If the request is vague and the repository has many services, build `brief` and offer `full` for the part the user names.
 
 ### Collection procedure per depth

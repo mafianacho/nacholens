@@ -12,7 +12,7 @@ import { makeTemplate } from "./template.js";
 import { scanRepo, formatScan } from "./scan.js";
 import { makeDemoRepo } from "./demo.js";
 import { install, version } from "./install.js";
-import { DEPTHS, resolveDepth, checkDepth, sizeOf, scanDiff, formatScanDiff } from "./depth.js";
+import { DEPTHS, normalizeDepth, depthName, resolveDepth, checkDepth, sizeOf, scanDiff, formatScanDiff } from "./depth.js";
 import { buildReview, validateIntent, checkIntent, buildImpact, discoverTests, isTestFile } from "./review.js";
 
 export const EXIT = { OK: 0, MODEL: 1, USAGE: 2, STRICT: 3, INTENT: 4 };
@@ -45,10 +45,10 @@ const USAGE = `nacholens — AI 가 바꾼 백엔드 변경을 유즈케이스 �
                       --intent <intent.json>  기획 의도 (기대사항을 모델과 대조)
               회귀 지도는 --repo --base 가 있으면 자동 (테스트는 경로 문자열로 찾는 추정)
 
-  수집 수준:  --depth diff|brief|full   (scan·validate·verify·build; 모델의 선택 필드 depth 와 같은 값)
-              diff   변경(--base..--head)이 닿는 유즈케이스·단계와 그 단계가 지나는 컴포넌트·table 만
-              brief  전체 구성(컴포넌트·연결·주요 유즈케이스·datastore), drill-down(parts·wires·columns·endpoints·trace·payload) 없음
-              full   전체 구성 + 스키마가 허용하는 세부 전부
+  깊이:       --depth 1|2|3  또는  diff|brief|full   (scan·validate·verify·build; 모델의 선택 필드 depth 와 같은 값)
+              1 변경만 (diff)   변경(--base..--head)이 닿는 유즈케이스·단계와 그 단계가 지나는 컴포넌트·table 만. 얕다는 뜻이 아니라 변경에 한정한다는 뜻
+              2 한눈에 (brief)  전체 구성(컴포넌트·연결·주요 유즈케이스·datastore), drill-down(parts·wires·columns·endpoints·trace·payload) 없음
+              3 자세히 (full)   전체 구성 + 스키마가 허용하는 세부 전부
               수준을 어기면 경고(종료 코드 영향 없음). 모델에 depth 가 없고 --depth 도 없으면 수준 검사를 하지 않습니다.
 
   공통 옵션:  --model <파일>   모델 위치 (기본 <repo>/.nacholens/model.json)
@@ -186,7 +186,7 @@ function applyDepth(model, opt, { changes = null, repo = null } = {}) {
 function logDepth(d, model, log) {
   if (!d.depth) return;
   const z = sizeOf(model);
-  log(`수준: ${d.depth}${d.declared ? "" : " (--depth 로 지정, 모델에 depth 선언 없음)"} · 컴포넌트 ${z.components} · 연결 ${z.links} · 유즈케이스 ${z.useCases} · 단계 ${z.steps} · 상세 parts ${z.parts} · wires ${z.wires} · tables ${z.tables}(columns ${z.columns}) · endpoints ${z.endpoints}`);
+  log(`${depthName(d.depth)}${d.declared ? "" : " (--depth 로 지정, 모델에 depth 선언 없음)"} · 컴포넌트 ${z.components} · 연결 ${z.links} · 유즈케이스 ${z.useCases} · 단계 ${z.steps} · 상세 parts ${z.parts} · wires ${z.wires} · tables ${z.tables}(columns ${z.columns}) · endpoints ${z.endpoints}`);
   d.scopeWarnings.forEach((w) => log("⚠ " + w));
   d.warnings.forEach((w) => log("⚠ " + w));
   d.notes.forEach((n) => log("· " + n));
@@ -197,6 +197,7 @@ export function run(argv, env = process.env, log = console.log) {
   if (cmd === "--version" || cmd === "-v" || cmd === "version") { log(version()); return EXIT.OK; }
   if (!cmd || cmd === "help" || cmd === "--help") { log(USAGE); return EXIT.OK; }
   const { pos, opt } = parseArgs(rest);
+  if (opt.depth !== undefined) opt.depth = normalizeDepth(opt.depth); // 1|2|3 -> diff|brief|full (usage error otherwise)
   if (opt.help) { log(USAGE); return EXIT.OK; }
 
   if (cmd === "init") {
@@ -212,7 +213,6 @@ export function run(argv, env = process.env, log = console.log) {
   if (cmd === "scan") {
     if (!opt.repo) throw new Error("--repo 가 필요합니다\n" + USAGE);
     const repo = openRepo(opt.repo);
-    if (opt.depth !== undefined && !DEPTHS.includes(opt.depth)) throw new Error(`--depth 은 ${DEPTHS.join("|")} 중 하나여야 합니다 (받은 값: ${JSON.stringify(opt.depth)})`);
     if (opt.depth === "diff") {
       if (!opt.base) throw new Error("scan --depth diff 는 --base 가 필요합니다 (비교할 이전 ref)\n" + USAGE);
       const d = scanDiff(repo, opt.base, opt.head ?? "HEAD");

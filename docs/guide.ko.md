@@ -68,11 +68,17 @@ nacholens impact --repo R --base B --model M
 
 `--strict-intent` 에서 미충족 기대사항이 있으면 종료 코드 4.
 
-## 수집 수준: diff · brief · full
+## 깊이: 1 변경만 · 2 한눈에 · 3 자세히
 
-모델을 쓰기 전에 **저장소의 어디까지 담을지**를 정합니다. 수준은 세 가지이고, 모델의 선택 필드 `"depth"` 와 `--depth` 옵션이 같은 말을 씁니다.
+모델을 쓰기 전에 **저장소의 어디까지 담을지**를 정합니다. 깊이는 세 가지이고, 말할 때는 **깊이 1 / 2 / 3** 이라고 합니다. 모델의 선택 필드 `"depth"` 에는 기술 이름(`diff` / `brief` / `full`)이 저장되고 `--depth` 는 둘 다 받습니다(`--depth 2` = `--depth brief`). 깊이 1 은 "얕다"가 아니라 **변경에 한정한다**는 뜻이며, 그 범위 안에서는 테이블·부품까지 담을 수 있습니다.
 
-| | `diff` | `brief` | `full` |
+| 이렇게 말하면 | 저장되는 이름 | 뜻 |
+|---|---|---|
+| 깊이 1 · 변경만 | `diff` | 변경이 닿는 부분만 |
+| 깊이 2 · 한눈에 | `brief` | 세부 없는 전체 구성 |
+| 깊이 3 · 자세히 | `full` | 전체 구성과 세부까지 |
+
+| | **1 · 변경만** (`diff`) | **2 · 한눈에** (`brief`) | **3 · 자세히** (`full`) |
 |---|---|---|---|
 | 답하는 질문 | "이번 변경이 어디를 건드렸나?" | "이 서비스는 어떻게 짜여 있나?" | "안쪽을 보여 줘: 테이블·부품·엔드포인트·데이터" |
 | 유즈케이스 | 바뀐 것만, 바뀐 단계만 | 주요 2~5개, 각 3~8단계 | 필요한 만큼, 각 5~10단계 |
@@ -81,7 +87,7 @@ nacholens impact --repo R --base B --model M
 | 분량 | 유즈케이스 1~4개, 단계 1~10개 | 컴포넌트 4~9개, 단계 약 10~30개 | brief + 서비스당 parts 6~16개, column 있는 tables, 근거 약 100~250건 |
 | 필요한 것 | `--repo` + `--base` | 저장소만 | 저장소만, 읽을 양이 가장 많음 |
 
-수준을 말하지 않으면 에이전트가 요청을 보고 고릅니다(변경을 말하면 `diff`, "어떻게 동작해?"는 `brief`, "테이블까지 자세히"는 `full`, 불분명하면 비교할 ref 가 있을 때 `diff`, 없으면 `brief`). 묻지 않고 만든 뒤 어느 수준으로 만들었고 무엇이 빠졌는지 알려 줍니다. 더 깊게/좁게 보려면 "full 로" "diff 로"라고 말하면 됩니다.
+깊이를 말하지 않으면 에이전트가 요청을 보고 고릅니다(변경을 말하면 1, "어떻게 동작해?"는 2, "테이블까지 자세히"는 3, 불분명하면 비교할 ref 가 있을 때 1, 없으면 2). 묻지 않고 만든 뒤 어느 깊이로 만들었고 무엇이 빠졌는지 알려 줍니다. 더 깊게/좁게 보려면 "깊이 3 으로" "깊이 1 로"라고 말하면 됩니다.
 
 예시 명령 (`SV` = `node src/cli.js`):
 
@@ -93,7 +99,7 @@ SV build    --repo ~/work/my-api --base main --model my-api.model.json
 
 # brief: 세부 없는 전체 그림
 SV scan --repo ~/work/my-api --depth brief
-SV validate my-api.model.json --depth brief                        # parts·tables·trace 등이 있으면 경고
+SV validate my-api.model.json --depth 2                            # = --depth brief; parts·tables·trace 등이 있으면 경고
 SV build    --repo ~/work/my-api --base main --model my-api.model.json --depth brief
 
 # full: 스키마가 담는 것 전부
@@ -101,7 +107,7 @@ SV validate my-api.model.json --depth full                         # 빠진 tabl
 SV verify   my-api.model.json --repo ~/work/my-api --depth full
 ```
 
-수준 규칙은 **경고만** 합니다(종료 코드 0). 규칙을 어겨도 모델은 유효합니다. 모델에 `depth` 도 없고 `--depth` 도 없으면 검사하지 않습니다. `build` 는 상단 바에 `수준: <level>` 을 보여 주고 `report.json` 에 `depth`·`depthWarnings` 를 씁니다. 데모 쇼핑몰에 세 수준이 모두 있습니다(`models/demo-shop/model.json` = full, `model.brief.json`, `model.diff.json`). 데모 변경에서 컴포넌트는 7 / 7 / 5개, 단계는 27 / 27 / 4개입니다. 형식: [`model-schema.md`](model-schema.md#optional-depth-collection-depth).
+깊이 규칙은 **경고만** 합니다(종료 코드 0). 규칙을 어겨도 모델은 유효합니다. 모델에 `depth` 도 없고 `--depth` 도 없으면 검사하지 않습니다. `build` 는 상단 바에 `깊이 2 · 한눈에` 같은 칩을 보여 주고 `report.json` 에 `depth`·`depthWarnings` 를 씁니다. 데모 쇼핑몰에 세 수준이 모두 있습니다(`models/demo-shop/model.json` = full, `model.brief.json`, `model.diff.json`). 데모 변경에서 컴포넌트는 7 / 7 / 5개, 단계는 27 / 27 / 4개입니다. 형식: [`model-schema.md`](model-schema.md#optional-depth-collection-depth).
 
 ## 종료 코드
 

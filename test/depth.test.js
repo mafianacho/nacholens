@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { run, EXIT } from "../src/cli.js";
 import { validateModel } from "../src/model.js";
-import { resolveDepth, checkDepth, sizeOf, scanDiff, DEPTHS } from "../src/depth.js";
+import { resolveDepth, normalizeDepth, depthName, checkDepth, sizeOf, scanDiff, DEPTHS } from "../src/depth.js";
 import { openRepo } from "../src/gitio.js";
 import { overlayFromRepo } from "../src/diff.js";
 import { makeDemoRepo } from "../src/demo.js";
@@ -40,7 +40,7 @@ test("resolveDepth: the flag and the model's own depth must agree; a bad flag is
   assert.equal(resolveDepth({ ...tiny(), depth: "full" }, undefined).depth, "full");
   assert.equal(resolveDepth({ ...tiny(), depth: "full" }, "full").error, null);
   assert.match(resolveDepth({ ...tiny(), depth: "full" }, "brief").error, /"full".*--depth brief/);
-  assert.throws(() => resolveDepth(tiny(), "huge"), /--depth 은 diff\|brief\|full/);
+  assert.throws(() => resolveDepth(tiny(), "huge"), /--depth 은 1\|2\|3 \(= 1 변경만 · 2 한눈에 · 3 자세히\) 또는 diff\|brief\|full/);
 });
 
 /* ───────── the rules ───────── */
@@ -161,7 +161,7 @@ test("validate / verify warn about the declared depth and still exit 0; build sh
   writeFileSync(f, JSON.stringify(m));
   const c = cap();
   assert.equal(run(["validate", f], {}, c.log), EXIT.OK);
-  assert.match(c.text(), /수준: brief · 컴포넌트 7/);
+  assert.match(c.text(), /깊이 2 · 한눈에 \(brief\) · 컴포넌트 7/);
   assert.match(c.text(), /⚠ brief 수준인데 컴포넌트 1개에 parts 가 있습니다/);
   // the same through verify (demo repo) and build
   const { dir: repoDir, base } = demoRepo();
@@ -182,7 +182,7 @@ test("--depth on a model without the field applies the rules and says it came fr
   const f = join(tmp(), "m.json");
   writeFileSync(f, JSON.stringify(tiny()));
   assert.equal(run(["validate", f, "--depth", "full"], {}, c.log), EXIT.OK);
-  assert.match(c.text(), /수준: full \(--depth 로 지정, 모델에 depth 선언 없음\)/);
+  assert.match(c.text(), /깊이 3 · 자세히 \(full\) \(--depth 로 지정, 모델에 depth 선언 없음\)/);
   assert.match(c.text(), /⚠ full 수준인데 datastore db/);
   const out = join(tmp(), "out");
   assert.equal(run(["build", f, "--depth", "brief", "--out", out, "--format", "both"], {}, () => {}), EXIT.OK);
@@ -215,7 +215,7 @@ test("--depth diff needs a change scope; with --repo --base it is checked agains
   const nf = join(tmp(), "n.json");
   writeFileSync(nf, JSON.stringify({ ...clone(model("full")), depth: undefined }));
   assert.equal(run(["validate", nf, "--repo", dir, "--base", base, "--depth", "diff"], {}, c.log), EXIT.OK);
-  assert.match(c.text(), /수준: diff \(--depth 로 지정/);
+  assert.match(c.text(), /깊이 1 · 변경만 \(diff\) \(--depth 로 지정/);
   assert.match(c.text(), /⚠ diff 수준인데 이번 변경에 닿지 않는 단계가 23개 있습니다/);
   const ch = join(tmp(), "c.json");
   // the overlay of the diff model itself (the one in models/ was made for the full model and names details the diff model dropped)
@@ -237,7 +237,7 @@ test("demo builds with a full-depth model and no depth warning; the page and rep
   const out = join(tmp(), "demo");
   const c = cap();
   assert.equal(run(["demo", "--out", out], {}, c.log), EXIT.OK, c.text());
-  assert.match(c.text(), /수준: full/);
+  assert.match(c.text(), /깊이 3 · 자세히 \(full\)/);
   assert.ok(!c.text().includes("⚠ full") && !c.text().includes("⚠ diff") && !c.text().includes("⚠ brief"), c.text());
   assert.match(readFileSync(join(out, "demo-shop.html"), "utf8"), /"depth":"full"/);
   assert.equal(run(["demo", "--out", join(tmp(), "d2"), "--depth", "full"], {}, () => {}), EXIT.OK);
@@ -295,7 +295,7 @@ test("scan CLI: --depth diff prints the candidate list or JSON and needs --base;
   run(["scan", "--repo", dir, "--depth", "diff", "--base", base, "--json"], {}, j.log);
   assert.equal(JSON.parse(j.text()).stats.candidates, 4);
   assert.throws(() => run(["scan", "--repo", dir, "--depth", "diff"], {}, () => {}), /--base 가 필요/);
-  assert.throws(() => run(["scan", "--repo", dir, "--depth", "tiny"], {}, () => {}), /--depth 은 diff\|brief\|full/);
+  assert.throws(() => run(["scan", "--repo", dir, "--depth", "tiny"], {}, () => {}), /--depth 은 1\|2\|3/);
   const b = cap();
   run(["scan", "--repo", dir, "--depth", "brief", "--json"], {}, b.log);
   assert.equal(JSON.parse(b.text()).depth, "brief");
@@ -342,13 +342,14 @@ test("0.3.1 everywhere it must be: package.json, CHANGELOG, CLI --version, the i
   assert.match(skill, /Pick the depth first/);
   // the installed CLI knows --depth: it validates a bundled demo model with a flag
   const out = execFileSync(process.execPath, [installedCli, "validate", join(proj, ".nacholens/cli/models/demo-shop/model.json"), "--depth", "full"], { encoding: "utf8" });
-  assert.match(out, /수준: full/);
+  assert.match(out, /깊이 3 · 자세히 \(full\)/);
 });
 
 test("SKILL.md explains the choice (default included), the content of each depth, size guides and a procedure per depth", () => {
   const s = readFileSync(join(root, "skills/nacholens/SKILL.md"), "utf8");
   assert.match(s, /^version: 1\.4\.0$/m);
   assert.match(s, /## 0\.1 Pick the depth first/);
+  assert.match(s, /Say it to the user as depth 1 \/ 2 \/ 3, never as the technical name/);
   for (const d of DEPTHS) {
     assert.match(s, new RegExp(`\\| \`${d}\` \\|`), `${d} row in the table`);
     assert.match(s, new RegExp(`\\*\\*${d}\\*\\* — `), `${d} procedure`);
@@ -364,14 +365,14 @@ test("every README copy block gets one depth line (all three levels named); the 
   for (const l of ["", ".ja", ".de", ".fr", ".zh", ".ko"]) {
     const md = readFileSync(join(root, `README${l}.md`), "utf8");
     const block = /```text\n([^]*?)```/.exec(md)[1];
-    const depthLines = block.split("\n").filter((x) => /\bdiff\b/.test(x) && /\bbrief\b/.test(x) && /\bfull\b/.test(x));
+    const depthLines = block.split("\n").filter((x) => /(^|\D)1\D.*\D2\D.*\D3(\D|$)/.test(x) && !/diff|brief|full/.test(x));
     assert.equal(depthLines.length, 1, `README${l}.md: one depth line in the block`);
     assert.ok(block.indexOf(depthLines[0]) > block.indexOf("<"), `README${l}.md: after the request line`);
     assert.ok(md.length < 4000, `README${l}.md stays short`);
   }
   for (const f of ["docs/guide.md", "docs/guide.ko.md"]) {
     const t = readFileSync(join(root, f), "utf8");
-    assert.match(t, /\| `diff` \| `brief` \| `full` \|/, f);
+    assert.match(t, /\(`diff`\) \| \*\*2 · (Overview|한눈에)\*\* \(`brief`\) \| \*\*3 · (Detailed|자세히)\*\* \(`full`\) \|/, f);
     for (const cmd of ["scan --repo ~/work/my-api --depth diff --base main", "--depth brief", "--depth full"]) assert.ok(t.includes(cmd), `${f}: ${cmd}`);
   }
   assert.match(readFileSync(join(root, "docs/model-schema.md"), "utf8"), /## Optional `depth` \(collection depth\)/);
@@ -389,4 +390,42 @@ test("npm pack ships everything depth needs (sources, models, changelog, skill, 
     if (!/^src\/[^/]+\.js$/.test(f)) continue;
     for (const m of readFileSync(join(root, f), "utf8").matchAll(/from "\.\/([^"]+\.js)"/g)) assert.ok(files.has(`src/${m[1]}`), `${f} imports ${m[1]}`);
   }
+});
+
+/* ───────── depth 1 / 2 / 3 ───────── */
+test("depth 1|2|3 are the same as diff|brief|full: normalised everywhere, names and numbers mix, anything else is a usage error", () => {
+  assert.deepEqual(["1", "2", "3", 1, " 2 ", "DIFF", "Brief", "full"].map(normalizeDepth), ["diff", "brief", "full", "diff", "brief", "diff", "brief", "full"]);
+  assert.equal(normalizeDepth(undefined), undefined);
+  for (const bad of ["0", "4", "deep", "", "1,2"]) assert.throws(() => normalizeDepth(bad), /--depth 은 1\|2\|3/, bad);
+  assert.equal(depthName("brief"), "깊이 2 · 한눈에 (brief)");
+  assert.equal(resolveDepth({ ...tiny(), depth: "brief" }, "2").error, null, "2 agrees with a model that declares brief");
+  assert.match(resolveDepth({ ...tiny(), depth: "brief" }, "3").error, /"brief".*--depth full/, "3 contradicts it");
+});
+
+test("CLI: --depth 2 behaves exactly like --depth brief; the stored depth in report.json is the name; help names the numbers", () => {
+  const f = join(tmp(), "m.json");
+  writeFileSync(f, JSON.stringify(tiny()));
+  const a = cap(), b = cap();
+  assert.equal(run(["validate", f, "--depth", "2"], {}, a.log), EXIT.OK);
+  assert.equal(run(["validate", f, "--depth", "brief"], {}, b.log), EXIT.OK);
+  assert.equal(a.text(), b.text());
+  assert.match(a.text(), /깊이 2 · 한눈에 \(brief\)/);
+  const { dir, base } = demoRepo();
+  const out = join(tmp(), "out");
+  assert.equal(run(["build", "--repo", dir, "--model", join(root, "models/demo-shop/model.brief.json"), "--base", base, "--out", out, "--depth", "2"], {}, () => {}), EXIT.OK);
+  assert.equal(JSON.parse(readFileSync(join(out, "report.json"), "utf8")).depth, "brief");
+  const m = cap();
+  assert.equal(run(["validate", join(root, "models/demo-shop/model.brief.json"), "--depth", "3"], {}, m.log), EXIT.MODEL);
+  assert.match(m.text(), /--depth full/);
+  const s = cap();
+  run(["scan", "--repo", dir, "--depth", "1", "--base", base, "--json"], {}, s.log);
+  assert.equal(JSON.parse(s.text()).depth, "diff");
+  const g = cap();
+  run(["scan", "--repo", dir, "--depth", "3"], {}, g.log);
+  assert.match(g.text(), /^full 수준:/);
+  assert.throws(() => run(["validate", f, "--depth", "4"], {}, () => {}), /--depth 은 1\|2\|3/);
+  const u = cap();
+  run(["help"], {}, u.log);
+  assert.match(u.text(), /--depth 1\|2\|3 {2}또는 {2}diff\|brief\|full/);
+  assert.match(u.text(), /1 변경만 \(diff\).*얕다는 뜻이 아니라/);
 });

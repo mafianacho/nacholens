@@ -6,6 +6,9 @@ export const STEP_KINDS = ["request", "response", "call", "internal"];
 export const CHANGE_KINDS = ["added", "modified", "removed"];
 // optional collection depth (see src/depth.js): which part of a repository the model covers
 export const DEPTHS = ["diff", "brief", "full"];
+// the same three, as people say them: depth 1 = changes only, 2 = overview, 3 = detailed (diff is a scope, not "shallow")
+export const DEPTH_LEVELS = { diff: 1, brief: 2, full: 3 };
+export const DEPTH_LABELS = { diff: "변경만", brief: "한눈에", full: "자세히" };
 // optional drill-down detail (all fields optional; a model without them renders as before)
 export const PART_ROLES = ["route", "handler", "middleware", "service", "port", "adapter", "job", "module"];
 export const DATA_OPS = ["read", "insert", "update", "upsert", "delete"];

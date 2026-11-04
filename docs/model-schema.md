@@ -54,7 +54,7 @@ Validation rejects: items without evidence, links or steps over undeclared links
 | `brief` | the whole composition without drill-down | any `parts`, `wires`, `tables`, `endpoints`, or step `trace`, `data`, `endpoints`, `payload`, `transforms` |
 | `full` | the whole composition and all drill-down | a datastore without `tables`, a service without `parts` (or parts without `wires`), an external without `endpoints`, a call step without `data` / `endpoints`, a step through parts without `trace`, no `payload` at all |
 
-`--depth diff|brief|full` on `validate`, `verify` and `build` applies the same rules to a model without the field; if the model declares another depth the command exits 1. `build` shows the depth in the page's top bar and writes `depth` and `depthWarnings` into `report.json`. Comparison and example commands: [`guide.md`](guide.md#collection-depth-diff-brief-full). `models/demo-shop/` has all three: `model.json` (full), `model.brief.json`, `model.diff.json`.
+`--depth 1|2|3` (or `diff|brief|full`; 1 = diff "Changes only", 2 = brief "Overview", 3 = full "Detailed") on `validate`, `verify` and `build` applies the same rules to a model without the field; if the model declares another depth the command exits 1. `build` shows the depth in the page's top bar and writes `depth` and `depthWarnings` into `report.json`. Comparison and example commands: [`guide.md`](guide.md#collection-depth-diff-brief-full). `models/demo-shop/` has all three: `model.json` (full), `model.brief.json`, `model.diff.json`.
 
 ## Optional drill-down detail
 

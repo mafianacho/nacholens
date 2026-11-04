@@ -459,11 +459,12 @@ test("the top bar shows the model's depth as a chip, in both languages; no depth
   const withDepth = (depth) => ({ ...demoModel(), depth });
   const ko = load({ model: withDepth("brief") }).byId["sv-depth"];
   assert.equal(ko.hidden, false);
-  assert.equal(ko.textContent, "수준: brief");
+  assert.equal(ko.textContent, "깊이 2 · 한눈에");
   assert.equal(ko.title, "전체 구성만, 세부 없음");
   const en = load({ model: withDepth("diff"), lang: "en" }).byId["sv-depth"];
-  assert.equal(en.textContent, "Depth: diff");
+  assert.equal(en.textContent, "Depth 1 · Changes only");
   assert.equal(en.title, "Only the parts the change touches");
+  assert.equal(load({ model: withDepth("full"), lang: "en" }).byId["sv-depth"].textContent, "Depth 3 · Detailed");
   assert.equal(load({ model: withDepth("full"), lang: "en" }).byId["sv-depth"].title, "The whole composition and its detail");
   const none = load({ model: tiny(), changes: null }).byId["sv-depth"];
   assert.equal(none.hidden, true);
