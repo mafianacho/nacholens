@@ -111,7 +111,7 @@ Model and overlay formats: [`model-schema.md`](model-schema.md).
 - **Failure branches** (401/403/409 …) are not drawn as separate paths; model them as steps if they matter.
 - **The page UI is English by default and Korean with `--lang ko`.** CLI messages and validation hints are still Korean. Model text (labels, narration) is yours and can be any language. Translating the CLI messages is the most wanted contribution.
 - Checked in Chromium only. The Claude.ai artifact panel was not tested.
-- Tested on unrelated public repositories (Python/FastAPI and Go `net/http`) with models written by an agent from `SKILL.md` alone: see [`examples/external/`](../examples/external/) (sources and licences) and `models/external/`. They are *examples of the process*, not endorsed descriptions of those projects.
+- Tested on an unrelated public repository (Python/FastAPI) with a model written by an agent from `SKILL.md` alone: see [`examples/external/`](../examples/external/) (source and licence) and `models/external/`. It is an *example of the process*, not an endorsed description of that project.
 - `scan` knows Node (Express, Hono, Fastify, Koa, Next, Nest), Python (FastAPI, Flask, Django), Go (`net/http`, chi, gin, echo), Spring annotations and common gateway/infra files. Other stacks still work; you just get fewer leads.
 
 ## Docs
