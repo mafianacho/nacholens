@@ -70,7 +70,7 @@
     out: "밖", outText: function (inPath, focus) { return inPath ? "이 단계의 " + focus + " 내부 경로는 모델에 없습니다" : "이 단계는 " + focus + " 밖에서 일어납니다"; },
     work: "내부 처리", workText: function (x) { return x + " 안에서 처리"; },
     first: "처음으로", prev: "이전 단계", next: "다음 단계", play: "재생", pause: "일시정지", replay: "다시 재생", toStep: function (n) { return n + "단계로"; }, speed: "재생 속도",
-    reviewed: "이 단계 리뷰함", gChanged: "이번에 바뀐 흐름", gSame: "바뀌지 않은 흐름", gAll: "흐름", reviewedTitle: "바뀐 단계 중 리뷰한 수", reviewBadge: function (a, b) { return "리뷰 " + a + "/" + b; },
+    noChanges: "변경 없음", reviewed: "이 단계 리뷰함", gChanged: "이번에 바뀐 흐름", gSame: "바뀌지 않은 흐름", gAll: "흐름", reviewedTitle: "바뀐 단계 중 리뷰한 수", reviewBadge: function (a, b) { return "리뷰 " + a + "/" + b; },
     noMatch: "맞는 흐름이 없습니다", overview: "흐름 개요", gone: "이번에 없어진 단계", howTo: "애니메이션 읽는 법", inStep: function (n) { return n + "단계에서 일어나는 일"; },
     field: { label: "단계 이름", kind: "종류", route: "경로", request: "요청", response: "응답" }, before: "변경 전", moved: "내용은 같고 단계 순서만 바뀌었습니다.",
     transforms: "데이터 모양이 바뀌는 곳", sent: "보내는 데이터", received: "받는 데이터", evidence: "근거 코드", changed: "바뀜", table: "테이블", endpoint: "엔드포인트",
@@ -97,7 +97,7 @@
     out: "Outside", outText: function (inPath, focus) { return inPath ? "The model has no path inside " + focus + " for this step" : "This step happens outside " + focus; },
     work: "Working", workText: function (x) { return "Working inside " + x; },
     first: "Back to the start", prev: "Previous step", next: "Next step", play: "Play", pause: "Pause", replay: "Replay", toStep: function (n) { return "Go to step " + n; }, speed: "Playback speed",
-    reviewed: "I reviewed this step", gChanged: "Changed in this work", gSame: "Not changed", gAll: "Flows", reviewedTitle: "Changed steps reviewed", reviewBadge: function (a, b) { return "Reviewed " + a + "/" + b; },
+    noChanges: "No changes", reviewed: "I reviewed this step", gChanged: "Changed in this work", gSame: "Not changed", gAll: "Flows", reviewedTitle: "Changed steps reviewed", reviewBadge: function (a, b) { return "Reviewed " + a + "/" + b; },
     noMatch: "No matching flow", overview: "Flow overview", gone: "Steps removed in this work", howTo: "How to read the animation", inStep: function (n) { return "What happens in step " + n; },
     field: { label: "Step name", kind: "Kind", route: "Route", request: "Request", response: "Response" }, before: "Before", moved: "Same content; only the step order changed.",
     transforms: "Where the data changes shape", sent: "Data sent", received: "Data received", evidence: "Evidence", changed: "Changed", table: "Table", endpoint: "Endpoint",
@@ -130,6 +130,7 @@
   function pathOf(st) { return [st.from].concat(st.via || [], [st.to]); }
   function chgOf(u, st) { return (S.overlay && stepChg[u.id + "/" + st.id]) || null; }
   function changedSteps(u) { return u.steps.filter(function (st) { return stepChg[u.id + "/" + st.id]; }); }
+  function anyChange() { return !!changes && (model.useCases.some(function (u) { return changedSteps(u).length; }) || (changes.components || []).length > 0); }
   function hasDetail(c) { return !!(c && ((c.parts && c.parts.length) || (c.tables && c.tables.length) || (c.endpoints && c.endpoints.length))); }
   function compTag(id) { // marked only when changed AND on a changed step of the selected flow
     var c = compChg[id]; if (!c || !S.overlay) return null;
@@ -773,7 +774,7 @@
     if (A.step < 0) kids = [h("span", { "class": "leg idle" }, W.idle), h("span", { "class": "txt kr", text: W.idleText(focus, model.components.some(hasDetail)) })];
     else if (!lg) kids = [h("span", { "class": "leg idle" }, W.out), h("span", { "class": "txt kr", text: W.outText(pathOf(u.steps[A.step]).indexOf(SC.focus) >= 0, focus) })];
     else if (lg.type === "work") kids = [h("span", { "class": "leg int" }, W.work), h("span", { "class": "txt kr", text: W.workText(itemName(lg.at)) })];
-    else kids = [h("span", { "class": "leg " + lg.tone }, LEG_KO[lg.tone] + " → " + itemName(lg.ids[lg.ids.length - 1])), h("span", { "class": "txt mono ell", text: lg.text })];
+    else kids = [h("span", { "class": "leg " + lg.tone }, LEG_KO[lg.tone] + " → " + itemName(lg.ids[lg.ids.length - 1])), h("span", { "class": "txt mono ell2", text: lg.text, title: lg.text })];
     if (reduce) { clear(c); put(c, kids); return; }
     cls(c, "swap", true);
     clearTimeout(c.swapTimer);
@@ -833,7 +834,8 @@
     ]);
     var sc = h("div", { "class": "scrub", id: "sv-scrub" });
     u.steps.forEach(function (st, i) {
-      put(sc, h("button", { type: "button", "class": "seg-step" + (i < A.step || (i === A.step && A.finished) ? " done" : ""), title: (i + 1) + ". " + st.label, "aria-label": W.toStep(i + 1), on: { click: function () { A.playing = false; go(i, true); } } }, h("i")));
+      var sg = stepChg[u.id + "/" + st.id];
+      put(sc, h("button", { type: "button", "class": "seg-step" + (i < A.step || (i === A.step && A.finished) ? " done" : "") + (sg ? " chg" : "") + (i === A.step ? " cur" : ""), title: (i + 1) + ". " + st.label + (sg ? " · " + ST[sg.change][1] : ""), "aria-label": W.toStep(i + 1), "aria-current": i === A.step ? "step" : null, on: { click: function () { A.playing = false; go(i, true); } } }, h("i")));
     });
     put(t, [sc, h("span", { "class": "counter", id: "sv-counter" }, (A.step + 1) + " / " + n)]);
     var sp = h("div", { "class": "seg", role: "group", "aria-label": W.speed });
@@ -856,35 +858,38 @@
   function renderSide() {
     var side = $("sv-list"); clear(side);
     var f = S.filter.trim().toLowerCase();
-    var groups = changes ? [["changed", W.gChanged], ["same", W.gSame]] : [["all", W.gAll]];
+    var split = anyChange(), groups = split ? [["changed", W.gChanged], ["same", W.gSame]] : [["all", W.gAll]], curLi = null;
     groups.forEach(function (g) {
       var list = model.useCases.filter(function (u) {
-        var grp = !changes ? "all" : changedSteps(u).length ? "changed" : "same";
-        return grp === g[0] && (!f || (u.title + " " + u.trigger).toLowerCase().indexOf(f) >= 0);
+        var grp = !split ? "all" : changedSteps(u).length ? "changed" : "same";
+        return grp === g[0] && (!f || (u.title + " " + u.trigger + " " + u.steps.map(function (st) { return st.label; }).join(" ")).toLowerCase().indexOf(f) >= 0);
       });
       if (!list.length) return;
-      var open = f || g[0] === "all" ? true : !S.collapsed[g[0]];
+      var open = f || g[0] === "all" || list.some(function (u) { return u.id === S.uc; }) ? true : !S.collapsed[g[0]]; // the flow on screen is never folded away
       put(side, h("button", { type: "button", "class": "gh", "aria-expanded": open ? "true" : "false", on: { click: function () { S.collapsed[g[0]] = open; renderSide(); } } }, icon("chevron"), g[1], h("span", { "class": "n", text: String(list.length) })));
       if (!open) return;
       list.forEach(function (u) {
         var cur = u.id === S.uc, ch = S.overlay ? changedSteps(u) : [], rv = ch.filter(function (st) { return ticks["rv:" + u.id + "/" + st.id]; }).length;
         put(side, h("button", { type: "button", "class": "uc", "data-uc": u.id, "aria-current": cur ? "true" : null, on: { click: function () { if (!cur) selectUc(u.id); } } },
-          h("span", { "class": "main" }, h("span", { "class": "t kr", text: u.title }), h("span", { "class": "m ell", text: u.trigger })),
+          h("span", { "class": "main" }, h("span", { "class": "t kr", text: u.title }), h("span", { "class": "m ell2", text: u.trigger, title: u.trigger })),
           ch.length ? h("span", { "class": "badge", "data-tone": rv === ch.length ? "success" : "warning", title: W.reviewedTitle }, W.reviewBadge(rv, ch.length)) : null));
         if (!cur) return;
         var ol = h("ol", { "class": "steps", id: "sv-steps" });
         u.steps.forEach(function (st, i) {
           var c = chgOf(u, st), pick = function () { A.playing = false; go(i, true); };
-          put(ol, h("li", { "class": "st" + (i < A.step ? " done" : ""), "data-step": st.id, "aria-current": i === A.step ? "step" : null, tabindex: 0,
+          var li = h("li", { "class": "st" + (i < A.step ? " done" : ""), "data-step": st.id, "aria-current": i === A.step ? "step" : null, tabindex: 0,
             on: { click: pick, keydown: function (e) { if (e.key === "Enter") pick(); } } },
-            h("span", { "class": "n" }, String(i + 1)), h("span", { "class": "lbl ell kr", text: st.label }),
+            h("span", { "class": "n" }, String(i + 1)), h("span", { "class": "lbl ell2 kr", text: st.label, title: st.label }),
             c ? h("span", { "class": "chg", "data-tone": ST[c.change][0] }, ST[c.change][1]) : null,
-            c ? tickBox("rv:" + u.id + "/" + st.id) : null));
+            c ? tickBox("rv:" + u.id + "/" + st.id) : null);
+          if (i === A.step) curLi = li;
+          put(ol, li);
         });
         put(side, ol);
       });
     });
     if (!side.firstChild) put(side, h("div", { "class": "empty", text: W.noMatch }));
+    if (curLi && curLi.scrollIntoView) curLi.scrollIntoView({ block: "nearest" }); // the step being played stays in view in a long list
   }
   function selectUc(id, step) {
     if (!ucById[id]) return;
@@ -986,11 +991,12 @@
   function renderTop() {
     $("sv-product").textContent = model.product.name;
     var g = changes && changes.generated, ref = $("sv-ref");
-    ref.hidden = !g; ref.textContent = g && g.base && g.head ? g.base.slice(0, 7) + " → " + g.head.slice(0, 7) : "";
+    ref.hidden = !g; ref.textContent = g && g.base && g.head ? (g.base === g.head ? g.head.slice(0, 7) + " · " + W.noChanges : g.base.slice(0, 7) + " → " + g.head.slice(0, 7)) : "";
     $("sv-commit").textContent = changes ? changes.title : model.product.description;
     var dp = $("sv-depth");
     if (dp) { dp.hidden = !model.depth; dp.textContent = model.depth ? W.depthWord + " " + ({ diff: 1, brief: 2, full: 3 }[model.depth]) + " · " + W.depthName[model.depth] : ""; dp.title = model.depth ? W.depthHint[model.depth] || "" : ""; }
     var t = $("sv-overlay"); t.hidden = !changes; t.setAttribute("aria-checked", S.overlay ? "true" : "false");
+    if (anyChange()) t.removeAttribute("disabled"); else t.setAttribute("disabled", ""); // nothing to highlight: the switch rests
     if (doc.title !== undefined) doc.title = model.product.name + " · Nacholens";
   }
   function syncHash() {
