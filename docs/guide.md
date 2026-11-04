@@ -19,7 +19,7 @@ Pick a use case ("sign in", "list orders") and watch a request travel from the c
 
 ## 5-minute start
 
-You need **Node.js ≥ 20** and **git**. Nothing to install.
+You need **Node.js ≥ 20** (checked on Node 24) and **git**. Nothing to install.
 
 ### 1. Look at the demo (30 seconds)
 
@@ -177,7 +177,7 @@ demo/shop/        public demo app v1 → v2     models/demo-shop/   its model an
 skills/nacholens/SKILL.md                   examples/           generated demo pages (tested)
 ```
 
-`npm test` runs everything (about a second). The demo app needs Node ≥ 22.13 (`node:sqlite`) to run; the tool itself needs Node ≥ 20.
+`npm test` runs everything (about a second). The demo app needs Node ≥ 22.13 (`node:sqlite`) to run; the tool itself needs Node ≥ 20. CI runs on Node 20, 22 and 24.
 
 ## License
 

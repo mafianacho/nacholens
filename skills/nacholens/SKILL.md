@@ -14,9 +14,9 @@ You (the agent) write a small **model** of the repo (components, use cases, step
 
 ## 0. Before you start
 
-- Needs **Node.js ≥ 20** and **git**. No packages to install.
+- Needs **Node.js ≥ 20** (checked on Node 24) and **git**. No packages to install.
 - `SV` below means the CLI. Find it in this order: `./cli/src/cli.js` next to this file (installed copy) → `$NACHOLENS_HOME/src/cli.js` → the `src/cli.js` of the nacholens repository. Run it as `node <path>/cli.js <command>`. Without any copy, `npx -y @mafianacho/nacholens@latest <command>` runs the published package (and `… install --to <dir>` puts this file and a CLI copy into `<dir>/nacholens/`).
-- Collection depth (§0.1) needs **nacholens ≥ 0.3.1**: `SV --version` prints it. An older CLI does not know `--depth` (it ignores a `depth` field in the model), so there is no depth check; tell the user to update instead of pretending the check ran.
+- Collection depth (§0.1) needs **nacholens ≥ 0.3.2**: `SV --version` prints it. An older CLI does not know `--depth` (it ignores a `depth` field in the model), so there is no depth check; tell the user to update instead of pretending the check ran.
 - **Try it in 30 seconds**: `SV demo` builds the bundled demo shop (gateway → API → SQLite + 3 third parties, with a real change) into `./nacholens-demo/`.
 - The **target repo is read-only**. Keep the model file outside it (`--model`) unless the user agrees to the default `<repo>/.nacholens/model.json`.
 - Output format: **if you are Claude pass `--agent claude`** (artifact: paste it into the conversation as an HTML artifact); any other agent omits it and gets a single offline HTML file.
@@ -24,7 +24,7 @@ You (the agent) write a small **model** of the repo (components, use cases, step
 - Command forms: `SV validate [model.json]` and `SV verify --repo R [--model M]` both take the model as a positional argument or `--model`.
 - CLI messages are Korean (validation hints, `TODO` template). File paths, JSON paths and `file:line` are language-neutral; follow them literally. The page's own words are English by default; add `--lang ko` to `build`/`demo` for Korean when the user writes in Korean. The model text (labels, narration) is yours: write it in the user's language.
 
-## 0.1 Pick the depth first — diff, brief or full (nacholens ≥ 0.3.1)
+## 0.1 Pick the depth first — diff, brief or full (nacholens ≥ 0.3.2)
 
 A model always covers *some* part of the repository. Decide how much **before you read code**, write it into the model (`"depth": "brief"`, an optional top-level field) and keep to it. **Say it to the user as depth 1 / 2 / 3, never as the technical name**: 1 = Changes only (`diff`), 2 = Overview (`brief`), 3 = Detailed (`full`). The page chip shows "Depth 2 · Overview". The model and `report.json` store `diff|brief|full`; `--depth` takes `1|2|3` or the names. Depth 1 is not "shallow": it means *limited to the change* (inside that scope it may hold tables and parts). `validate`, `verify` and `build` read the depth from the model and **warn** (exit 0, nothing is blocked) when the model breaks the rules of its depth. `--depth 1|2|3` (or `diff|brief|full`) does the same without the field; if both exist they must agree (otherwise exit 1). A model with no `depth` and no `--depth` is simply not checked, exactly as before.
 

@@ -17,7 +17,7 @@ Meine Anfrage: <hier schreiben, was du sehen willst>
 Tiefe (optional): 1 nur Änderungen · 2 Überblick · 3 Details (Tabellen und Innenleben). Ohne Angabe wähle nach meiner Anfrage und sag mir, welche.
 
 So geht's:
-1. Hole das nacholens-Playbook und die CLI (braucht Node.js 20+ und git; in dieses Repository wird nichts installiert):
+1. Hole das nacholens-Playbook und die CLI (braucht Node.js 20+, geprüft mit Node 24, und git; in dieses Repository wird nichts installiert):
    npx -y @mafianacho/nacholens@latest install --to "$HOME/.nacholens-skill" --force
 2. Lies "$HOME/.nacholens-skill/nacholens/SKILL.md" und folge ihm. Die CLI ist:
    node "$HOME/.nacholens-skill/nacholens/cli/src/cli.js" <command>

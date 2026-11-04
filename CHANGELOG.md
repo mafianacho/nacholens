@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.3.1
+## 0.3.2
+
+0.3.1 was never published; everything below is in 0.3.2.
+
+- Node: CI runs on Node 20, 22 and 24 (was 20 and 22); the publish workflow uses Node 24. `engines` stays `>=20`, so Node 20 and 22 users are not blocked. Docs say "Node 20+, checked on Node 24".
+
+### Collection depth
 
 **Collection depth: 1 Changes only · 2 Overview · 3 Detailed** (stored as `diff` / `brief` / `full`). Decide how much of a repository a model covers before writing it. People say depth 1 / 2 / 3; depth 1 is not "shallow" but "limited to the change".
 

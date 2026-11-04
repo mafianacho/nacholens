@@ -39,7 +39,7 @@ function agentsBlock() {
     "## nacholens (architecture flow viewer)",
     "",
     "When asked to show what changed in this repo's backend/infra without reading code, or to draw how a service works,",
-    "read `.nacholens/SKILL.md` and follow it. CLI: `node .nacholens/cli/src/cli.js` (Node >= 20, no install).",
+    "read `.nacholens/SKILL.md` and follow it. CLI: `node .nacholens/cli/src/cli.js` (Node >= 20, checked on Node 24, no install).",
     END,
     "",
   ].join("\n");

@@ -321,24 +321,24 @@ test("scan brief shows fewer leads per section than full, --limit still wins", (
 });
 
 /* ───────── version, docs and the package ───────── */
-test("0.3.1 everywhere it must be: package.json, CHANGELOG, CLI --version, the installed copy, the issue template", () => {
+test("0.3.2 everywhere it must be: package.json, CHANGELOG, CLI --version, the installed copy, the issue template", () => {
   const pkg = readJson("package.json");
-  assert.equal(pkg.version, "0.3.1");
-  assert.match(readFileSync(join(root, "CHANGELOG.md"), "utf8"), /^# Changelog\n\n## 0\.3\.1\n/);
+  assert.equal(pkg.version, "0.3.2");
+  assert.match(readFileSync(join(root, "CHANGELOG.md"), "utf8"), /^# Changelog\n\n## 0\.3\.2\n/);
   const c = cap();
   assert.equal(run(["--version"], {}, c.log), EXIT.OK);
-  assert.equal(c.text(), "0.3.1");
+  assert.equal(c.text(), "0.3.2");
   assert.equal(run(["version"], {}, () => {}), EXIT.OK);
-  assert.match(readFileSync(join(root, ".github/ISSUE_TEMPLATE/bug_report.yml"), "utf8"), /placeholder: "0\.3\.1, /);
+  assert.match(readFileSync(join(root, ".github/ISSUE_TEMPLATE/bug_report.yml"), "utf8"), /placeholder: "0\.3\.2, /);
   // `install` vendors the version and a playbook that explains the depths
   const proj = tmp();
   assert.equal(run(["install", "--agents", "--into", proj], {}, () => {}), EXIT.OK);
-  assert.equal(readFileSync(join(proj, ".nacholens/cli/VERSION"), "utf8").trim(), "0.3.1");
-  assert.equal(JSON.parse(readFileSync(join(proj, ".nacholens/cli/package.json"), "utf8")).version, "0.3.1");
+  assert.equal(readFileSync(join(proj, ".nacholens/cli/VERSION"), "utf8").trim(), "0.3.2");
+  assert.equal(JSON.parse(readFileSync(join(proj, ".nacholens/cli/package.json"), "utf8")).version, "0.3.2");
   const installedCli = join(proj, ".nacholens/cli/src/cli.js");
-  assert.equal(execFileSync(process.execPath, [installedCli, "--version"], { encoding: "utf8" }).trim(), "0.3.1");
+  assert.equal(execFileSync(process.execPath, [installedCli, "--version"], { encoding: "utf8" }).trim(), "0.3.2");
   const skill = readFileSync(join(proj, ".nacholens/SKILL.md"), "utf8");
-  assert.match(skill, /nacholens ≥ 0\.3\.1/);
+  assert.match(skill, /nacholens ≥ 0\.3\.2/);
   assert.match(skill, /Pick the depth first/);
   // the installed CLI knows --depth: it validates a bundled demo model with a flag
   const out = execFileSync(process.execPath, [installedCli, "validate", join(proj, ".nacholens/cli/models/demo-shop/model.json"), "--depth", "full"], { encoding: "utf8" });
@@ -384,7 +384,7 @@ test("npm pack ships everything depth needs (sources, models, changelog, skill, 
   for (const f of ["src/depth.js", "src/scan.js", "src/cli.js", "src/install.js", "CHANGELOG.md", "skills/nacholens/SKILL.md", "models/demo-shop/model.json", "models/demo-shop/model.brief.json", "models/demo-shop/model.diff.json", "docs/guide.md", "docs/guide.ko.md", "docs/model-schema.md", "package.json"])
     assert.ok(files.has(f), `package is missing ${f}`);
   assert.ok([...files].every((f) => !f.startsWith("test/")), "no tests in the package");
-  assert.equal(out[0].version, "0.3.1");
+  assert.equal(out[0].version, "0.3.2");
   // every relative import of a shipped source file is shipped too
   for (const f of files) {
     if (!/^src\/[^/]+\.js$/.test(f)) continue;
@@ -428,4 +428,17 @@ test("CLI: --depth 2 behaves exactly like --depth brief; the stored depth in rep
   run(["help"], {}, u.log);
   assert.match(u.text(), /--depth 1\|2\|3 {2}또는 {2}diff\|brief\|full/);
   assert.match(u.text(), /1 변경만 \(diff\).*얕다는 뜻이 아니라/);
+});
+
+test("Node baseline: CI runs 20, 22 and 24 with a pinned setup-node, publish uses 24, engines stays >=20, the docs say 20+ and checked on 24", () => {
+  const ci = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8");
+  assert.match(ci, /node: \["20", "22", "24"\]/);
+  assert.match(ci, /actions\/setup-node@[0-9a-f]{40} # v/, "setup-node stays pinned to a commit");
+  const publish = readFileSync(join(root, ".github/workflows/publish.yml"), "utf8");
+  assert.match(publish, /node-version: "24"/);
+  assert.match(publish, /actions\/setup-node@[0-9a-f]{40} # v/);
+  assert.equal(readJson("package.json").engines.node, ">=20");
+  for (const f of ["README.md", "README.ko.md", "README.ja.md", "README.de.md", "README.fr.md", "README.zh.md", "docs/guide.md", "docs/guide.ko.md", "skills/nacholens/SKILL.md", "CONTRIBUTING.md"])
+    assert.match(readFileSync(join(root, f), "utf8"), /Node(\.js)?[ ≥>=]*20.{0,40}24|Node 24.{0,40}20|20.{0,30}Node 24|Node\.js 20.{0,40}Node 24/s, `${f} names the baseline 20 and the checked 24`);
+  assert.match(readFileSync(join(root, "CHANGELOG.md"), "utf8"), /Node 20, 22 and 24/);
 });

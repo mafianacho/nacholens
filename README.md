@@ -19,7 +19,7 @@ My request: <write what you want to see here>
 Depth (optional): 1 Changes only · 2 Overview · 3 Detailed (tables and internals). If I name none, pick by my request and tell me which.
 
 How:
-1. Get the nacholens playbook and CLI (needs Node.js 20+ and git; nothing is installed into this repository):
+1. Get the nacholens playbook and CLI (needs Node.js 20+, checked on Node 24, and git; nothing is installed into this repository):
    npx -y @mafianacho/nacholens@latest install --to "$HOME/.nacholens-skill" --force
 2. Read "$HOME/.nacholens-skill/nacholens/SKILL.md" and follow it. The CLI is:
    node "$HOME/.nacholens-skill/nacholens/cli/src/cli.js" <command>

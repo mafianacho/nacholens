@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping. nacholens has **no runtime dependencies** and wants to keep it that way: Node >= 20 and git are enough.
+Thanks for helping. nacholens has **no runtime dependencies** and wants to keep it that way: Node >= 20 (checked on Node 24) and git are enough.
 
 ## Set up
 
@@ -40,7 +40,7 @@ The demo app itself (`demo/shop/v1`, `v2`) needs Node >= 22.13 (`node:sqlite`); 
 
 ## Pull requests
 
-CI runs `npm test` on Node 20 and 22 for pull requests. It uses no secrets. Fill in the checklist in the PR template.
+CI runs `npm test` on Node 20, 22 and 24 for pull requests. The publish workflow uses Node 24. It uses no secrets. Fill in the checklist in the PR template.
 
 ## License
 
