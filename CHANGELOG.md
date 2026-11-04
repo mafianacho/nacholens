@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.2
+
+- Player: **wires are routed around boxes.** A wire was a straight line between box centres, so it could run under a box between its ends, cross another wire or lie on top of one. Now each wire is an orthogonal path with rounded corners from the side of one box to the side of the other: only through free gaps (clear of every other box), separate exit points for wires sharing a side, separate lanes for wires sharing a gap, and the travelling packet follows exactly the drawn wire. No free path: the old straight hop is the fallback. The gaps between the columns inside a component are wider. No model change.
+
 ## 0.3.1
 
 **Collection depth: 1 Changes only · 2 Overview · 3 Detailed** (stored as `diff` / `brief` / `full`). Decide how much of a repository a model covers before writing it. People say depth 1 / 2 / 3; depth 1 is not "shallow" but "limited to the change".
@@ -11,7 +15,6 @@
 - `nacholens --version` prints the CLI version.
 - Playbook (`skills/nacholens/SKILL.md`, 1.4.0): how to choose the depth (default included: the agent decides from the request, never stops to ask, and says which depth it built), what each depth contains and leaves out, size guides, and the collection procedure per depth.
 - Docs: depth comparison and example commands in `docs/guide.md` / `docs/guide.ko.md`; one depth line ("1 Changes only · 2 Overview · 3 Detailed") in the copy-paste agent block of all six READMEs; `depth` in `docs/model-schema.md`.
-- Player: **wires are routed around boxes.** A wire was a straight line between box centres, so it could run under a box between its ends, cross another wire or lie on top of one. Now each wire is an orthogonal path with rounded corners from the side of one box to the side of the other: only through free gaps (clear of every other box), separate exit points for wires sharing a side, separate lanes for wires sharing a gap, and the travelling packet follows exactly the drawn wire. No free path: the old straight hop is the fallback. The gaps between the columns inside a component are wider. No model change.
 - Demo shop: `model.json` declares `depth: "full"`; `model.brief.json` and `model.diff.json` are derived from it (`npm run build:depth-models`).
 
 ## Earlier
