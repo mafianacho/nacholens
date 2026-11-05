@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Encode captured frames (render.mjs output) into one looping GIF with a shared palette.
 
-  python3 docs/motion/encode.py <frames dir> <out.gif> [--fps 12.5] [--hold-last 1500]
+  python3 docs/motion/encode.py <frames dir> <out.gif> [--fps 25] [--hold-last 1500]
 
 Needs Pillow. The shared 255-colour palette is built from a sample of the frames, so the colours do not
 flicker between frames and unchanged areas stay identical (Pillow then stores only the changed rectangle).
@@ -15,7 +15,7 @@ from PIL import Image
 ap = argparse.ArgumentParser()
 ap.add_argument("frames")
 ap.add_argument("out")
-ap.add_argument("--fps", type=float, default=12.5)
+ap.add_argument("--fps", type=float, default=25.0)
 ap.add_argument("--hold-last", type=int, default=0, help="extra milliseconds on the last frame")
 ap.add_argument("--colors", type=int, default=255)
 a = ap.parse_args()

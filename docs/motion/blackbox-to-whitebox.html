@@ -4,8 +4,10 @@
 <!--
   Source of docs/images/blackbox-to-whitebox*.gif.
   A pure function of time: window.renderFrame(t) draws the scene at second t (0..DURATION).
-  Open it in a browser with ?lang=en or ?lang=ko; ?t=7.5 shows one still frame.
-  Frames are captured and encoded by render.mjs (see README.md in this folder).
+  Open it with ?lang=en or ?lang=ko; ?t=7.5 shows one still frame.
+  Frames are captured and encoded by render.mjs / encode.py (see README.md in this folder).
+  Palette and type roles: the Nacho Combo design system, as used in src/player/player.css
+  (paper / nacho / guac / salsa / board tokens; Nacho Sans for text, Anton only for the one loud line).
 -->
 <style>
   @font-face { font-family: "Nacho Sans"; font-weight: 400; src: url("../../src/player/fonts/nacho-sans-400.woff2") format("woff2"); }
@@ -15,28 +17,37 @@
   @font-face { font-family: "Nacho Mono"; font-weight: 500; src: url("../../src/player/fonts/nacho-mono-500.woff2") format("woff2"); }
   @font-face { font-family: "Nacho Mono"; font-weight: 600; src: url("../../src/player/fonts/nacho-mono-600.woff2") format("woff2"); }
   @font-face { font-family: "Anton"; font-weight: 400; src: url("../../src/player/fonts/anton-400.woff2") format("woff2"); }
+  /* Hangul: the design-system stack names Pretendard. If fonts/PretendardVariable.woff2 exists (optional, not committed) it is used. */
+  @font-face { font-family: "Pretendard Variable"; font-weight: 45 920; src: url("fonts/PretendardVariable.woff2") format("woff2-variations"); }
   html, body { margin: 0; background: #fff; }
   svg { display: block; }
-  text { font-family: "Nacho Sans", "Noto Sans CJK KR", "Noto Sans CJK JP", sans-serif; }
-  .mono { font-family: "Nacho Mono", "Noto Sans Mono CJK KR", monospace; }
+  text { font-family: "Nacho Sans", "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", "Noto Sans CJK KR", system-ui, sans-serif; }
+  .mono { font-family: "Nacho Mono", ui-monospace, "Noto Sans Mono CJK KR", monospace; }
   .anton { font-family: "Anton", "Nacho Sans", sans-serif; }
 </style>
 <svg id="stage" xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540"></svg>
 <script>
 (() => {
-const W = 960, H = 540, DURATION = 17.5;   // seconds shown; scene times below are 'scene seconds' (0..15.5)
+const W = 960, H = 540, DURATION = 17.5;   // seconds shown; scene times below are "scene seconds" (0..15.5)
 const lang = new URLSearchParams(location.search).get("lang") === "ko" ? "ko" : "en";
+
+// ---- Nacho Combo tokens (same values as src/player/player.css, section 1a)
+const K = {
+  paper: "#FFFFFF", paper2: "#FFF7E1", line: "#EBDDBF", ink: "#24180D", ink2: "#66553F",
+  nacho: "#FFC43D", nachoDeep: "#E48A0C", nachoInk: "#9A5A00", onNacho: "#2A1A0B", guac: "#377F33", salsa: "#BE3B24",
+  board: "#1E1610", board2: "#2B2017", boardLine: "#45352A", boardInk: "#FFF1D2", boardMute: "#BFA889", boardSalsa: "#F38069", boardGuac: "#7FCB72"
+};
 
 const STR = {
   en: {
     before: "BEFORE", beforeTitle: "AI coding agents are a black box",
     after: "AFTER", afterTitle: "nacholens turns it into a white box",
     you: "You", ask: "Show shipping status\non the order list",
-    agent: "AI agent", blackbox: "BLACK BOX",
+    agent: "AI agent", blackbox: "Can't see inside",
     files: "23 files changed",
     q1: "What did it touch?", q2: "Any new outside calls?", q3: "What should I re-test?",
     cap: "You can't see inside. Checking 23 files means reading code.",
-    legend: "Highlighted from git diff: orange = changed, green = new",
+    legend: "Highlighted from git diff:  yellow = changed,  green = new",
     steps: [
       "Browser asks for the order list",
       "Gateway checks the session",
@@ -45,14 +56,14 @@ const STR = {
       "Order API builds the reply with the status",
       "Browser shows the list with delivery status"
     ],
-    changed: "Changed", isNew: "NEW",
-    nodes: { browser: ["Browser", "Client"], gateway: ["Gateway", "Gateway"], api: ["Order API", "Service"],
+    changed: "Changed", isNew: "New",
+    nodes: { browser: ["Browser", "Client"], gateway: ["Gateway", "Entry point"], api: ["Order API", "Service"],
              db: ["SQLite", "Data store"], track: ["Shipping tracker", "External service"], ana: ["Analytics", "External service"] },
     a1: "2 parts changed, 1 new", s1: "Browser, Order API, Shipping tracker",
     a2: "Yes: Shipping tracker", s2: "One lookup per order",
     a3: "Re-test these 2 flows", s3: "List my orders, Place an order",
     black: "Black box", white: "White box",
-    tag1: "See what your AI changed.", tag2: "No code reading needed.",
+    loud1: "SEE WHAT YOUR AI CHANGED.", loud2: "NO CODE READING.", loudSize: 56,
     tag3: "Pick a use case, watch the request move, see the changed parts.",
     brand: "Made by Mafianacho Inc."
   },
@@ -60,11 +71,11 @@ const STR = {
     before: "BEFORE", beforeTitle: "AI 에이전틱 코딩은 블랙박스입니다",
     after: "AFTER", afterTitle: "nacholens가 화이트박스로 바꿉니다",
     you: "나", ask: "주문 목록에\n배송 상태를 보여줘",
-    agent: "AI 에이전트", blackbox: "BLACK BOX",
+    agent: "AI 에이전트", blackbox: "안이 보이지 않음",
     files: "파일 23개 변경",
     q1: "뭘 건드렸지?", q2: "새 외부 호출은 없나?", q3: "뭘 다시 테스트하지?",
     cap: "안을 볼 수 없습니다. 파일 23개를 확인하려면 코드를 읽어야 합니다.",
-    legend: "git diff로 강조: 주황 = 변경, 초록 = 새로 추가",
+    legend: "git diff로 강조:  노랑 = 변경,  초록 = 새로 추가",
     steps: [
       "브라우저가 주문 목록을 요청",
       "게이트웨이가 세션을 확인",
@@ -74,13 +85,13 @@ const STR = {
       "브라우저가 배송 상태와 함께 목록을 표시"
     ],
     changed: "변경", isNew: "신규",
-    nodes: { browser: ["브라우저", "클라이언트"], gateway: ["게이트웨이", "게이트웨이"], api: ["주문 API", "서비스"],
+    nodes: { browser: ["브라우저", "클라이언트"], gateway: ["게이트웨이", "진입점"], api: ["주문 API", "서비스"],
              db: ["SQLite", "데이터 저장소"], track: ["배송 추적기", "외부 서비스"], ana: ["분석 도구", "외부 서비스"] },
     a1: "2곳 변경, 1곳 신규", s1: "브라우저, 주문 API, 배송 추적기",
     a2: "있음: 배송 추적기", s2: "주문마다 1회 조회",
     a3: "다시 볼 흐름 2개", s3: "내 주문 보기, 주문하기",
     black: "블랙박스", white: "화이트박스",
-    tag1: "AI가 무엇을 바꿨는지 눈으로 확인하세요.", tag2: "코드를 읽을 필요가 없습니다.",
+    loud1: "AI가 바꾼 것을 눈으로 확인하세요.", loud2: "코드를 읽을 필요가 없습니다.", loudSize: 42,
     tag3: "유즈케이스를 고르면 요청이 움직이고 바뀐 곳이 강조됩니다.",
     brand: "Made by Mafianacho Inc."
   }
@@ -89,11 +100,12 @@ const STR = {
 const NS = "http://www.w3.org/2000/svg";
 const svg = document.getElementById("stage");
 const ups = [];                       // per-frame updaters
+const fits = [];                      // [text element, max width]: shrunk after fonts load so nothing leaves its box
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const seg = (t, a, b) => clamp((t - a) / (b - a));
 const eo = p => 1 - Math.pow(1 - p, 3);
 const eio = p => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
-const back = p => { const c = 1.9; return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
+const back = p => { const c = 1.7; return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
 const lerp = (a, b, p) => a + (b - a) * p;
 
 function el(tag, attrs = {}, parent = svg) {
@@ -104,21 +116,18 @@ function el(tag, attrs = {}, parent = svg) {
 }
 function g(parent, attrs = {}) { return el("g", attrs, parent); }
 function text(parent, x, y, str, o = {}) {
-  const t = el("text", {
-    x, y, "font-size": o.size || 16, "font-weight": o.weight || 500, fill: o.fill || "#1a1a1a",
-    "text-anchor": o.anchor || "start", ...(o.ls ? { "letter-spacing": o.ls } : {})
-  }, parent);
+  const t = el("text", { x, y, "font-size": o.size || 16, "font-weight": o.weight || 500, fill: o.fill || K.ink, "text-anchor": o.anchor || "start" }, parent);
   if (o.cls) t.setAttribute("class", o.cls);
   String(str).split("\n").forEach((line, i) => {
     const s = el("tspan", { x, dy: i === 0 ? 0 : (o.lh || (o.size || 16) * 1.3) }, t);
     s.textContent = line;
   });
+  if (o.fit) fits.push([t, o.fit]);
   return t;
 }
 function rect(parent, x, y, w, h, o = {}) {
   return el("rect", { x, y, width: w, height: h, rx: o.rx ?? 0, fill: o.fill || "none", ...(o.stroke ? { stroke: o.stroke, "stroke-width": o.sw || 2 } : {}), ...(o.extra || {}) }, parent);
 }
-// reveal a group: fade + slide up
 function reveal(node, a, b, dy = 10) {
   ups.push(t => {
     const p = eo(seg(t, a, b));
@@ -130,276 +139,367 @@ function windowed(node, a, b, f = .12) {
   ups.push(t => node.setAttribute("opacity", Math.min(seg(t, a, a + f), 1 - seg(t, b - f, b))));
 }
 
+// ---- line icons (24 x 24 grid, round caps, drawn as strokes: one family, one weight)
+const ICONS = {
+  user: ['<circle cx="12" cy="8" r="4"/>', '<path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/>'],
+  sparkles: ['<path d="M11 3l2 5.4L18.4 10.4 13 12.4 11 17.8 9 12.4 3.6 10.4 9 8.4z"/>', '<path d="M19 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/>'],
+  eyeOff: ['<path d="M3 3l18 18"/>', '<path d="M10.6 5.1A9.7 9.7 0 0 1 12 5c5.2 0 8.6 4 9.6 7a13 13 0 0 1-2.3 3.5"/>', '<path d="M6.5 6.6C4.3 8 2.9 10 2.4 12c1 3 4.4 7 9.6 7 1.6 0 3-.4 4.2-1"/>', '<path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>'],
+  eye: ['<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/>', '<circle cx="12" cy="12" r="3"/>'],
+  files: ['<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>', '<path d="M14 3v5h5"/>', '<path d="M9 13h6M12 10v6M9 19h6"/>'],
+  help: ['<circle cx="12" cy="12" r="9.5"/>', '<path d="M9.2 9.2a3 3 0 0 1 5.8 1c0 2-3 2.6-3 4.3"/>', '<path d="M12 17.4h.01"/>'],
+  window: ['<rect x="3" y="4" width="18" height="16" rx="2.5"/>', '<path d="M3 9h18"/>', '<path d="M6.5 6.5h.01M9 6.5h.01"/>'],
+  shield: ['<path d="M12 3l8 3v6c0 5-3.4 8-8 9-4.6-1-8-4-8-9V6z"/>', '<path d="M8.8 12l2.2 2.2 4.2-4.4"/>'],
+  server: ['<rect x="3" y="3.5" width="18" height="7" rx="2"/>', '<rect x="3" y="13.5" width="18" height="7" rx="2"/>', '<path d="M7 7h.01M7 17h.01M12 7h5M12 17h5"/>'],
+  database: ['<ellipse cx="12" cy="5.5" rx="8.5" ry="3"/>', '<path d="M3.5 5.5v13c0 1.7 3.8 3 8.5 3s8.5-1.3 8.5-3v-13"/>', '<path d="M3.5 12c0 1.7 3.8 3 8.5 3s8.5-1.3 8.5-3"/>'],
+  truck: ['<path d="M14 17V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a1 1 0 0 0 1 1h2"/>', '<path d="M14 17H9"/>', '<path d="M14 8h4l4 4v4a1 1 0 0 1-1 1h-2"/>', '<circle cx="7" cy="17.5" r="2"/>', '<circle cx="17" cy="17.5" r="2"/>'],
+  chart: ['<path d="M3.5 3.5V20.5H20.5"/>', '<path d="M8 16v-5M12.5 16V7M17 16v-8"/>'],
+  check: ['<path d="M5 12.5l4.5 4.5L19 7"/>'],
+  arrow: ['<path d="M4 12h15M13 6l6 6-6 6"/>'],
+  search: ['<circle cx="10.5" cy="10.5" r="6.5"/>', '<path d="M21 21l-5.2-5.2"/>'],
+  lock: ['<rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/>', '<path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>'],
+  terminal: ['<path d="M4 6l6 6-6 6M12.5 19H20"/>'],
+  chat: ['<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H11l-5 4v-4h-0A2.5 2.5 0 0 1 4 13.5z"/>']
+};
+function icon(parent, name, cx, cy, size, color, sw = 1.8) /* sw in screen px */ {
+  const grp = g(parent, { transform: `translate(${cx - size / 2} ${cy - size / 2}) scale(${size / 24})`, fill: "none", stroke: color, "stroke-width": sw * 24 / size, "stroke-linecap": "round", "stroke-linejoin": "round" });
+  grp.innerHTML = ICONS[name].join("");
+  return grp;
+}
+
+// ---- defs
 const defs = el("defs");
-const dots = el("pattern", { id: "dots", width: 22, height: 22, patternUnits: "userSpaceOnUse" }, defs);
-el("circle", { cx: 2, cy: 2, r: 1.2, fill: "#D9D9D4" }, dots);
-const blur = el("filter", { id: "glow", x: "-40%", y: "-60%", width: "180%", height: "220%" }, defs);
-el("feGaussianBlur", { stdDeviation: 9 }, blur);
-const blurSm = el("filter", { id: "soft", x: "-20%", y: "-20%", width: "140%", height: "140%" }, defs);
-el("feGaussianBlur", { stdDeviation: 3 }, blurSm);
+const dots = el("pattern", { id: "dots", width: 24, height: 24, patternUnits: "userSpaceOnUse" }, defs);
+el("circle", { cx: 2, cy: 2, r: 1.1, fill: K.line }, dots);
+const blur = el("filter", { id: "glow", x: "-50%", y: "-60%", width: "200%", height: "220%" }, defs);
+el("feGaussianBlur", { stdDeviation: 10 }, blur);
+const glowA = el("radialGradient", { id: "warm", cx: "50%", cy: "50%", r: "55%" }, defs);
+el("stop", { offset: "0", "stop-color": K.nacho, "stop-opacity": .13 }, glowA);
+el("stop", { offset: "1", "stop-color": K.nacho, "stop-opacity": 0 }, glowA);
 const clipA = el("clipPath", { id: "clipA" }, defs);
 const clipARect = el("rect", { x: 0, y: 0, width: W, height: H }, clipA);
 const boxClip = el("clipPath", { id: "boxClip" }, defs);
-el("rect", { x: 344, y: 176, width: 262, height: 160, rx: 14 }, boxClip);
+el("rect", { x: 342, y: 196, width: 266, height: 140, rx: 8 }, boxClip);
 
 function logo(parent, x, y, dark) {
   const b = g(parent, { transform: `translate(${x} ${y})` });
-  rect(b, 0, 0, 30, 30, { rx: 7, fill: "#FFC21A" });
-  text(b, 15, 24, "N", { size: 25, anchor: "middle", fill: "#111", cls: "anton", weight: 400 });
-  text(b, 40, 24, "NACHOLENS", { size: 25, fill: dark ? "#F2F0EA" : "#1a1a1a", cls: "anton", weight: 400, ls: 1.5 });
+  rect(b, 0, 0, 30, 30, { rx: 7, fill: K.nacho });
+  text(b, 15, 24, "N", { size: 25, anchor: "middle", fill: K.onNacho, cls: "anton", weight: 400 });
+  text(b, 40, 24, "NACHOLENS", { size: 25, fill: dark ? K.boardInk : K.ink, cls: "anton", weight: 400 });
+}
+function chip(parent, x, y, label, fill, color, w) {
+  rect(parent, x, y, w, 30, { rx: 7, fill });
+  text(parent, x + w / 2, y + 20.5, label, { size: 14, weight: 700, fill: color, anchor: "middle" });
 }
 
 // ============================================================ scene C (white box, below)
 const C = g(svg);
-rect(C, 0, 0, W, H, { fill: "#FCFCFA" });
+rect(C, 0, 0, W, H, { fill: K.paper });
 rect(C, 0, 0, W, H, { fill: "url(#dots)" });
-rect(C, 0, 0, W, 60, { fill: "#FFFFFF" });
-rect(C, 0, 60, W, 1.5, { fill: "#E5E5E0" });
+rect(C, 0, 0, W, 60, { fill: K.paper });
+rect(C, 0, 60, W, 1.5, { fill: K.line });
 {
-  const hp = g(C);
-  rect(hp, 32, 15, 84, 30, { rx: 15, fill: "#1F7A3A" });
-  text(hp, 74, 36, STR.after, { size: 15, weight: 700, fill: "#fff", anchor: "middle", ls: 1.2 });
-  text(hp, 132, 38, STR.afterTitle, { size: 22, weight: 700, fill: "#1a1a1a" });
+  chip(C, 32, 15, STR.after, K.guac, "#fff", 76);
+  text(C, 124, 38, STR.afterTitle, { size: 21, weight: 600, fill: K.ink });
   logo(C, 720, 15, false);
 }
 
 const NODE = {
-  browser: { x: 30, y: 220 }, gateway: { x: 232, y: 220 }, api: { x: 434, y: 220 },
-  db: { x: 730, y: 125, w: 200 }, track: { x: 730, y: 220, w: 200 }, ana: { x: 730, y: 315, w: 200 }
+  browser: { x: 30, y: 236, w: 160, icon: "window" }, gateway: { x: 252, y: 236, w: 160, icon: "shield" }, api: { x: 474, y: 236, w: 160, icon: "server" },
+  db: { x: 730, y: 142, w: 200, icon: "database" }, track: { x: 730, y: 236, w: 200, icon: "truck" }, ana: { x: 730, y: 330, w: 200, icon: "chart" }
 };
-const NW = 160, NH = 64;
+const NH = 68, MID = 236 + NH / 2;
 const edges = {
-  e1: "M190 252 L232 252", e2: "M392 252 L434 252",
-  e3: "M594 252 C 665 252 665 157 730 157", e4: "M594 252 L730 252", e5: "M594 252 C 665 252 665 347 730 347"
+  e1: `M190 ${MID} L252 ${MID}`, e2: `M412 ${MID} L474 ${MID}`,
+  e3: `M634 ${MID} C 690 ${MID} 680 ${142 + NH / 2} 730 ${142 + NH / 2}`, e4: `M634 ${MID} L730 ${MID}`, e5: `M634 ${MID} C 690 ${MID} 680 ${330 + NH / 2} 730 ${330 + NH / 2}`
 };
-const edgeEls = {};
+const edgeEnd = { e1: [252, MID], e2: [474, MID], e3: [730, 142 + NH / 2], e4: [730, MID], e5: [730, 330 + NH / 2] };
+const edgeBase = {}, edgeLit = {};
 for (const [k, d] of Object.entries(edges)) {
-  el("path", { d, fill: "none", stroke: "#CFCFC8", "stroke-width": 3, "stroke-linecap": "round" }, C);
-  edgeEls[k] = el("path", { d, fill: "none", stroke: k === "e4" ? "#1F7A3A" : "#222", "stroke-width": 4, "stroke-linecap": "round", opacity: 0 }, C);
+  edgeBase[k] = el("path", { d, fill: "none", stroke: "#C7AE78", "stroke-width": 3, "stroke-linecap": "round" }, C);
+  el("path", { d: `M${edgeEnd[k][0] - 8} ${edgeEnd[k][1] - 6} L${edgeEnd[k][0]} ${edgeEnd[k][1]} L${edgeEnd[k][0] - 8} ${edgeEnd[k][1] + 6}`, fill: "none", stroke: "#C7AE78", "stroke-width": 3, "stroke-linecap": "round", "stroke-linejoin": "round" }, C);
 }
-const active = (k, a, b) => ups.push(t => edgeEls[k].setAttribute("opacity", t >= a && t <= b ? 1 : 0));
-active("e1", 6.9, 7.4); active("e2", 7.4, 7.9); active("e3", 7.9, 9.0); active("e4", 9.0, 10.3); active("e2", 10.3, 10.8); active("e1", 10.8, 11.3);
+for (const [k, d] of Object.entries(edges)) {
+  edgeLit[k] = el("path", { d, pathLength: 1, fill: "none", stroke: K.nachoDeep, "stroke-width": 4.5, "stroke-linecap": "round", opacity: 0 }, C);
+}
+// request / response legs: [from, to, edge, reverse?, kind]
+const legs = [
+  [6.9, 7.4, "e1", 0, "req"], [7.4, 7.9, "e2", 0, "req"], [7.9, 8.5, "e3", 0, "req"], [8.5, 9.0, "e3", 1, "res"],
+  [9.0, 9.7, "e4", 0, "req"], [9.7, 10.3, "e4", 1, "res"], [10.3, 10.8, "e2", 1, "res"], [10.8, 11.3, "e1", 1, "res"]
+];
+ups.push(t => {
+  for (const k of Object.keys(edgeLit)) {
+    const mine = legs.filter(l => l[2] === k && t >= l[0]);
+    if (!mine.length) { edgeLit[k].setAttribute("opacity", 0); continue; }
+    const [a, b, , rev, kind] = mine[mine.length - 1];
+    const done = t >= b, p = done ? 1 : eio(seg(t, a, b));
+    edgeLit[k].setAttribute("opacity", done ? Math.max(0, 1 - (t - b) / 0.9) : 1);
+    edgeLit[k].setAttribute("stroke", kind === "res" ? K.ink : K.nachoDeep);
+    edgeLit[k].setAttribute("stroke-dasharray", `${p} 2`);
+    edgeLit[k].setAttribute("stroke-dashoffset", rev ? -(1 - p) : 0);
+  }
+});
 
-// glow behind the new node
-const glowNew = rect(C, NODE.track.x - 6, NODE.track.y - 6, NODE.track.w + 12, NH + 12, { rx: 18, fill: "#2E9E4F", extra: { filter: "url(#glow)", opacity: 0 } });
-ups.push(t => glowNew.setAttribute("opacity", .55 * Math.min(seg(t, 8.9, 9.3), 1 - seg(t, 10.2, 10.8)) * (0.75 + 0.25 * Math.sin(t * 10))));
+// glow behind the new node + expanding ring when the request reaches it
+const T = NODE.track;
+const glowNew = rect(C, T.x - 6, T.y - 6, T.w + 12, NH + 12, { rx: 18, fill: K.guac, extra: { filter: "url(#glow)", opacity: 0 } });
+ups.push(t => glowNew.setAttribute("opacity", .42 * Math.min(seg(t, 8.9, 9.3), 1 - seg(t, 10.2, 10.8)) * (0.8 + 0.2 * Math.sin(t * 9))));
+const ring = rect(C, T.x, T.y, T.w, NH, { rx: 14, stroke: K.guac, sw: 3 });
+ups.push(t => {
+  const p = seg(t, 9.55, 10.15);
+  const e = eo(p), grow = 4 + e * 26;
+  ring.setAttribute("x", T.x - grow); ring.setAttribute("y", T.y - grow);
+  ring.setAttribute("width", T.w + grow * 2); ring.setAttribute("height", NH + grow * 2);
+  ring.setAttribute("rx", 14 + grow * .6);
+  ring.setAttribute("opacity", p > 0 && p < 1 ? .65 * (1 - p) : 0);
+});
 
+const arrivals = { browser: [11.3], gateway: [7.4, 10.8], api: [7.9, 9.0, 10.3], db: [8.5], track: [9.7], ana: [] };
 function node(key, state) {
-  const n = NODE[key], [name, kind] = STR.nodes[key], nw = n.w || NW;
-  const grp = g(C);
-  const body = rect(grp, n.x, n.y, nw, NH, { rx: 12, fill: "#fff", stroke: "#D4D4CE", sw: 2.5 });
-  const tile = rect(grp, n.x + 10, n.y + 19, 26, 26, { rx: 7, fill: "#ECECE6" });
-  text(grp, n.x + 46, n.y + 31, name, { size: 15.5, weight: 700 });
-  text(grp, n.x + 46, n.y + 50, kind, { size: 12, weight: 500, fill: "#6B6B66" });
+  const n = NODE[key], [name, kind] = STR.nodes[key];
+  const grp = g(C), cx = n.x + n.w / 2, cy = n.y + NH / 2;
+  const body = rect(grp, n.x, n.y, n.w, NH, { rx: 12, fill: K.paper2, stroke: K.line, sw: 2 });
+  const tile = rect(grp, n.x + 12, n.y + 16, 36, 36, { rx: 9, fill: K.paper, stroke: K.line, sw: 1.5 });
+  const ic = icon(grp, n.icon, n.x + 30, n.y + 34, 24, K.ink2, 1.9);
+  text(grp, n.x + 58, n.y + 31, name, { size: 16, weight: 600, fit: n.w - 66 });
+  text(grp, n.x + 58, n.y + 50, kind, { size: 13, weight: 400, fill: K.ink2, fit: n.w - 66 });
+  let tag = null;
   if (state) {
     const isNew = state === "new";
-    const tagTxt = isNew ? STR.isNew : STR.changed;
-    const tw = tagTxt.length * (lang === "ko" ? 13 : 8.2) + 22;
-    const tag = g(C);
-    rect(tag, n.x + nw - tw - 8, n.y - 13, tw, 25, { rx: 12.5, fill: isNew ? "#1F7A3A" : "#FFE3A3" });
-    text(tag, n.x + nw - tw / 2 - 8, n.y + 4.5, tagTxt, { size: 13, weight: 700, fill: isNew ? "#fff" : "#8A4B00", anchor: "middle" });
-    ups.push(t => {
-      const p = seg(t, 6.2, 6.7);
-      tag.setAttribute("opacity", p);
-      body.setAttribute("stroke", p > .5 ? (isNew ? "#1F7A3A" : "#222") : "#D4D4CE");
-      body.setAttribute("stroke-width", p > .5 ? 3.5 : 2.5);
-      body.setAttribute("fill", p > .5 ? (isNew ? "#E6F4E9" : "#FFF3D1") : "#fff");
-      tile.setAttribute("fill", p > .5 ? (isNew ? "#2E9E4F" : "#FFC21A") : "#ECECE6");
-    });
+    const label = isNew ? STR.isNew : STR.changed;
+    const tw = label.length * (lang === "ko" ? 13.5 : 8.4) + 20;
+    tag = g(grp);
+    rect(tag, n.x + n.w - tw - 8, n.y - 13, tw, 25, { rx: 6, fill: isNew ? K.guac : K.nacho });
+    text(tag, n.x + n.w - tw / 2 - 8, n.y + 4.5, label, { size: 13, weight: 700, fill: isNew ? "#fff" : K.onNacho, anchor: "middle" });
   }
+  ups.push(t => {
+    const p = state ? seg(t, 6.2, 6.7) : 0;
+    if (tag) {
+      const pp = back(p);
+      tag.setAttribute("opacity", Math.min(1, p * 2));
+      tag.setAttribute("transform", `translate(${n.x + n.w - 20} ${n.y}) scale(${.6 + .4 * pp}) translate(${-(n.x + n.w - 20)} ${-n.y})`);
+    }
+    const on = p > .5;
+    body.setAttribute("stroke", on ? (state === "new" ? K.guac : K.ink) : K.line);
+    body.setAttribute("stroke-width", on ? 3 : 2);
+    tile.setAttribute("fill", on ? (state === "new" ? K.guac : K.nacho) : K.paper);
+    tile.setAttribute("stroke", on ? "none" : K.line);
+    ic.setAttribute("stroke", on ? (state === "new" ? "#fff" : K.onNacho) : K.ink2);
+    // a small pulse each time the request reaches this component
+    let s = 1;
+    for (const a of arrivals[key]) { const q = seg(t, a - .05, a + .4); if (q > 0 && q < 1) s += .045 * Math.sin(Math.PI * q); }
+    grp.setAttribute("transform", `translate(${cx} ${cy}) scale(${s}) translate(${-cx} ${-cy})`);
+  });
 }
 node("browser", "changed"); node("gateway"); node("api", "changed");
 node("db"); node("track", "new"); node("ana");
 
-// travelling request dot
+// the travelling request: a dot with a fading trail
 const paths = Object.fromEntries(Object.entries(edges).map(([k, d]) => [k, el("path", { d, fill: "none", stroke: "none" }, C)]));
-const legs = [
-  [6.9, 7.4, "e1", 0], [7.4, 7.9, "e2", 0], [7.9, 8.5, "e3", 0], [8.5, 9.0, "e3", 1],
-  [9.0, 9.7, "e4", 0], [9.7, 10.3, "e4", 1], [10.3, 10.8, "e2", 1], [10.8, 11.3, "e1", 1]
-];
-const dot = g(C);
-const dotHalo = el("circle", { r: 15, fill: "#FFC21A", opacity: .35 }, dot);
-const dotCore = el("circle", { r: 8.5, fill: "#FFC21A", stroke: "#222", "stroke-width": 2.5 }, dot);
-ups.push(t => {
+function posAt(t) {
   const leg = legs.find(l => t >= l[0] && t <= l[1]);
-  if (!leg) { dot.setAttribute("opacity", 0); return; }
-  const [a, b, k, rev] = leg;
+  if (!leg) return null;
+  const [a, b, k, rev, kind] = leg;
   const p = eio(seg(t, a, b)), pe = paths[k], len = pe.getTotalLength();
   const pt = pe.getPointAtLength(len * (rev ? 1 - p : p));
-  dot.setAttribute("opacity", 1);
-  dot.setAttribute("transform", `translate(${pt.x} ${pt.y})`);
-  const green = k === "e4";
-  dotCore.setAttribute("fill", green ? "#2E9E4F" : "#FFC21A");
-  dotHalo.setAttribute("fill", green ? "#2E9E4F" : "#FFC21A");
+  return { x: pt.x, y: pt.y, kind, edge: k };
+}
+const trail = [];
+for (let i = 5; i >= 1; i--) trail.push([i, el("circle", { r: 9 - i * 1, fill: K.nachoDeep, opacity: 0 }, C)]);
+const dot = g(C);
+const dotRing = el("circle", { r: 14, fill: "none", stroke: K.nachoDeep, "stroke-width": 2.5, opacity: .6 }, dot);
+const dotCore = el("circle", { r: 8, fill: K.nachoDeep, stroke: K.paper, "stroke-width": 3 }, dot);
+ups.push(t => {
+  const now = posAt(t);
+  dot.setAttribute("opacity", now ? 1 : 0);
+  if (now) {
+    dot.setAttribute("transform", `translate(${now.x} ${now.y})`);
+    const col = now.kind === "res" ? K.ink : K.nachoDeep;
+    dotCore.setAttribute("fill", col); dotRing.setAttribute("stroke", col);
+    dotRing.setAttribute("r", 14 + 2 * Math.sin(t * 14));
+  }
+  for (const [i, c] of trail) {
+    const pt = posAt(t - i * .045);
+    if (now && pt) {
+      c.setAttribute("cx", pt.x); c.setAttribute("cy", pt.y);
+      c.setAttribute("fill", now.kind === "res" ? K.ink : K.nachoDeep);
+      c.setAttribute("opacity", .30 * (1 - i / 6));
+    } else c.setAttribute("opacity", 0);
+  }
 });
 
-// caption pill (legend, then steps)
-const capX = 150, capW = 660, capY = 74;
-const caps = [];
+// caption (legend, then one line per step)
+const capX = 170, capW = 620, capY = 70;
 function capPill(label, a, b, o = {}) {
   const grp = g(C, { opacity: 0 });
-  rect(grp, capX, capY, capW, 38, { rx: 19, fill: o.fill || "#fff", stroke: o.stroke || "#E0E0DA", sw: 2 });
+  rect(grp, capX, capY, capW, 40, { rx: 10, fill: o.fill || K.paper, stroke: o.stroke || K.line, sw: 2 });
   if (o.num) {
-    el("circle", { cx: capX + 22, cy: capY + 19, r: 13, fill: o.numFill || "#FFC21A" }, grp);
-    text(grp, capX + 22, capY + 24.5, o.num, { size: 15, weight: 700, anchor: "middle", fill: o.numText || "#111" });
-    text(grp, capX + 46, capY + 25, label, { size: 17, weight: 600, fill: "#1a1a1a" });
+    el("circle", { cx: capX + 24, cy: capY + 20, r: 13, fill: o.numFill || K.nacho }, grp);
+    text(grp, capX + 24, capY + 25.5, o.num, { size: 15, weight: 700, anchor: "middle", fill: o.numText || K.onNacho });
+    text(grp, capX + 48, capY + 26, label, { size: 17, weight: 500, fill: K.ink, fit: capW - 64 });
   } else {
-    text(grp, capX + capW / 2, capY + 25, label, { size: 17, weight: 600, fill: "#1a1a1a", anchor: "middle" });
+    text(grp, capX + capW / 2, capY + 26, label, { size: 16.5, weight: 500, fill: K.ink, anchor: "middle", fit: capW - 24 });
   }
   windowed(grp, a, b);
-  return grp;
 }
-capPill(STR.legend, 6.3, 6.9, { fill: "#FFF8E1", stroke: "#F0D78A" });
+capPill(STR.legend, 6.3, 6.9, { fill: K.paper2, stroke: K.line });
 capPill(STR.steps[0], 6.9, 7.4, { num: "1" });
 capPill(STR.steps[1], 7.4, 7.9, { num: "2" });
 capPill(STR.steps[2], 7.9, 9.0, { num: "3" });
-capPill(STR.steps[3], 9.0, 10.3, { num: "4", fill: "#E6F4E9", stroke: "#2E9E4F", numFill: "#1F7A3A", numText: "#fff" });
+capPill(STR.steps[3], 9.0, 10.3, { num: "4", fill: K.paper2, stroke: K.guac, numFill: K.guac, numText: "#fff" });
 capPill(STR.steps[4], 10.3, 10.8, { num: "5" });
 capPill(STR.steps[5], 10.8, 11.5, { num: "6" });
 
 // the three answers (they answer the three questions of scene A)
-const CARD = [
+[
   { x: 32, q: STR.q1, a: STR.a1, s: STR.s1, t: 8.3 },
   { x: 345, q: STR.q2, a: STR.a2, s: STR.s2, t: 9.7 },
   { x: 658, q: STR.q3, a: STR.a3, s: STR.s3, t: 10.4 }
-];
-CARD.forEach(c => {
+].forEach(c => {
   const grp = g(C, { opacity: 0 });
-  rect(grp, c.x, 410, 270, 92, { rx: 14, fill: "#fff", stroke: "#E0E0DA", sw: 2 });
-  rect(grp, c.x, 410, 6, 92, { rx: 3, fill: "#1F7A3A" });
-  text(grp, c.x + 22, 434, c.q, { size: 14, weight: 600, fill: "#6B6B66" });
-  text(grp, c.x + 22, 463, c.a, { size: 19, weight: 700, fill: "#1a1a1a" });
-  text(grp, c.x + 22, 486, c.s, { size: 13.5, weight: 500, fill: "#6B6B66" });
-  el("circle", { cx: c.x + 246, cy: 434, r: 12, fill: "#1F7A3A" }, grp);
-  el("path", { d: `M${c.x + 240} 434 l4.5 4.5 l8 -9`, fill: "none", stroke: "#fff", "stroke-width": 3, "stroke-linecap": "round", "stroke-linejoin": "round" }, grp);
-  reveal(grp, c.t, c.t + .4, 14);
+  rect(grp, c.x, 424, 270, 96, { rx: 12, fill: K.paper2, stroke: K.line, sw: 2 });
+  rect(grp, c.x, 436, 5, 72, { rx: 2.5, fill: K.guac });
+  text(grp, c.x + 22, 450, c.q, { size: 14, weight: 500, fill: K.ink2, fit: 190 });
+  text(grp, c.x + 22, 479, c.a, { size: 19, weight: 600, fill: K.ink, fit: 232 });
+  text(grp, c.x + 22, 503, c.s, { size: 14, weight: 400, fill: K.ink2, fit: 232 });
+  el("circle", { cx: c.x + 244, cy: 448, r: 13, fill: K.guac }, grp);
+  icon(grp, "check", c.x + 244, 448, 15, "#fff", 2.4);
+  reveal(grp, c.t, c.t + .45, 16);
 });
 
 // ============================================================ scene A (black box, above, wiped away)
 const A = g(svg, { "clip-path": "url(#clipA)" });
-rect(A, 0, 0, W, H, { fill: "#15141A" });
-rect(A, 0, 0, W, 60, { fill: "#1D1C23" });
-rect(A, 0, 60, W, 1.5, { fill: "#2D2C35" });
+rect(A, 0, 0, W, H, { fill: K.board });
+rect(A, 0, 0, W, H, { fill: "url(#warm)" });
+rect(A, 0, 0, W, 60, { fill: "#241A12" });
+rect(A, 0, 60, W, 1.5, { fill: K.boardLine });
 {
-  rect(A, 32, 15, 98, 30, { rx: 15, fill: "#E5484D" });
-  text(A, 81, 36, STR.before, { size: 15, weight: 700, fill: "#fff", anchor: "middle", ls: 1.2 });
-  text(A, 146, 38, STR.beforeTitle, { size: 22, weight: 700, fill: "#F2F0EA" });
+  chip(A, 32, 15, STR.before, K.salsa, "#fff", 86);
+  text(A, 134, 38, STR.beforeTitle, { size: 21, weight: 600, fill: K.boardInk });
   logo(A, 720, 15, true);
 }
 // you + request bubble
 {
   const you = g(A);
-  el("circle", { cx: 86, cy: 262, r: 29, fill: "#3A3A44" }, you);
-  el("circle", { cx: 86, cy: 253, r: 9.5, fill: "#9A9AA6" }, you);
-  el("path", { d: "M68 280 q18 -22 36 0", fill: "#9A9AA6" }, you);
-  text(you, 86, 316, STR.you, { size: 15, weight: 600, fill: "#B7B4AA", anchor: "middle" });
+  rect(you, 58, 232, 56, 56, { rx: 14, fill: K.board2, stroke: K.boardLine, sw: 2 });
+  icon(you, "user", 86, 260, 28, K.boardMute, 1.8);
+  text(you, 86, 312, STR.you, { size: 14.5, weight: 500, fill: K.boardMute, anchor: "middle" });
   reveal(you, .1, .5);
   const bub = g(A);
-  rect(bub, 36, 120, 262, 76, { rx: 14, fill: "#F2F0EA" });
-  el("path", { d: "M70 196 l12 20 l12 -20 z", fill: "#F2F0EA" }, bub);
-  text(bub, 52, 150, STR.ask, { size: 17, weight: 600, fill: "#15141A", lh: 24 });
+  rect(bub, 36, 118, 262, 82, { rx: 12, fill: K.board2, stroke: K.boardLine, sw: 2 });
+  el("path", { d: "M74 200 L86 218 L98 200", fill: K.board2, stroke: K.boardLine, "stroke-width": 2, "stroke-linejoin": "round" }, bub);
+  rect(bub, 75.5, 197, 21, 5, { fill: K.board2 });
+  icon(bub, "chat", 62, 144, 20, K.nacho, 1.8);
+  text(bub, 82, 146, STR.ask, { size: 16.5, weight: 500, fill: K.boardInk, lh: 23 });
   reveal(bub, .35, .85, 8);
 }
 // arrow you -> box with a request packet
-el("path", { d: "M130 262 L336 262", stroke: "#4A4A55", "stroke-width": 3, "stroke-dasharray": "2 9", "stroke-linecap": "round" }, A);
+el("path", { d: "M128 260 L322 260", stroke: K.boardLine, "stroke-width": 3, "stroke-dasharray": "1 9", "stroke-linecap": "round" }, A);
+el("path", { d: "M324 252 L334 260 L324 268", fill: "none", stroke: K.boardMute, "stroke-width": 3, "stroke-linecap": "round", "stroke-linejoin": "round" }, A);
 {
   const pk = g(A);
-  rect(pk, -16, -11, 32, 22, { rx: 5, fill: "#FFC21A" });
-  rect(pk, -9, -4, 18, 3, { rx: 1.5, fill: "#15141A" });
-  rect(pk, -9, 3, 12, 3, { rx: 1.5, fill: "#15141A" });
+  rect(pk, -17, -12, 34, 24, { rx: 6, fill: K.nacho });
+  icon(pk, "chat", 0, 0, 16, K.onNacho, 2.2);
   ups.push(t => {
     const p = eio(seg(t, .95, 1.75));
     pk.setAttribute("opacity", Math.min(seg(t, .95, 1.05), 1 - seg(t, 1.7, 1.8)));
-    pk.setAttribute("transform", `translate(${lerp(140, 330, p)} 262)`);
+    pk.setAttribute("transform", `translate(${lerp(140, 330, p)} 260)`);
   });
 }
 // the black box
 {
   const box = g(A);
-  rect(box, 340, 140, 270, 230, { rx: 22, fill: "#000", stroke: "#5A5A66", sw: 3 });
-  text(box, 475, 168, STR.agent, { size: 16, weight: 600, fill: "#8B8B95", anchor: "middle" });
+  rect(box, 340, 140, 270, 230, { rx: 22, fill: "#0C0806", stroke: K.boardLine, sw: 2.5 });
+  icon(box, "sparkles", 366, 168, 20, K.boardMute, 1.8);
+  text(box, 384, 174, STR.agent, { size: 15, weight: 500, fill: K.boardMute });
   // murky scrolling code lines inside
   const inner = g(box, { "clip-path": "url(#boxClip)" });
   const rows = g(inner);
   const seed = n => { const x = Math.sin(n * 91.7) * 43758.5453; return x - Math.floor(x); };
   for (let i = 0; i < 16; i++) {
     const w = 40 + seed(i + 1) * 170, ind = Math.floor(seed(i + 9) * 3) * 22;
-    rect(rows, 360 + ind, 182 + i * 20, w, 8, { rx: 4, fill: "#26252D" });
+    rect(rows, 362 + ind, 202 + i * 20, w, 7, { rx: 3.5, fill: "#1D1610" });
   }
   ups.push(t => {
     rows.setAttribute("transform", `translate(0 ${-((t * 38) % 40)})`);
     inner.setAttribute("opacity", Math.min(seg(t, 1.6, 2.2), 1 - seg(t, 4.9, 5.4)));
   });
-  const q = text(box, 475, 292, "?", { size: 128, anchor: "middle", fill: "#fff", cls: "anton", weight: 400 });
+  const eyeG = g(box);
+  el("circle", { cx: 475, cy: 255, r: 58, fill: "#0C0806" }, eyeG);
+  el("circle", { cx: 475, cy: 255, r: 58, fill: "none", stroke: K.boardLine, "stroke-width": 2 }, eyeG);
+  icon(eyeG, "eyeOff", 475, 255, 64, K.boardMute, 2.4);
   ups.push(t => {
-    q.setAttribute("opacity", seg(t, 1.5, 2.0) * (.6 + .4 * Math.sin(t * 4.2) ** 2));
+    const pulse = .72 + .28 * Math.sin(t * 4.2) ** 2;
+    eyeG.setAttribute("opacity", seg(t, 1.4, 1.9) * pulse);
   });
-  text(box, 475, 352, STR.blackbox, { size: 13, weight: 600, fill: "#E5484D", anchor: "middle", ls: 3, cls: "mono" });
+  // "can't see inside" label with a lock
+  rect(box, 375, 330, 200, 32, { rx: 8, fill: "#1A0F0C", stroke: K.salsa, sw: 1.8 });
+  icon(box, "lock", 396, 346, 16, K.boardSalsa, 1.9);
+  text(box, 413, 351.5, STR.blackbox, { size: 14.5, weight: 600, fill: K.boardSalsa, fit: 150 });
   reveal(box, 0, .4, 0);
 }
 // arrow box -> diff pile
-el("path", { d: "M614 262 L690 262", stroke: "#4A4A55", "stroke-width": 3, "stroke-dasharray": "2 9", "stroke-linecap": "round" }, A);
+el("path", { d: "M616 260 L668 260", stroke: K.boardLine, "stroke-width": 3, "stroke-dasharray": "1 9", "stroke-linecap": "round" }, A);
+el("path", { d: "M666 252 L676 260 L666 268", fill: "none", stroke: K.boardMute, "stroke-width": 3, "stroke-linecap": "round", "stroke-linejoin": "round" }, A);
 {
   const pk = g(A);
-  rect(pk, -14, -10, 28, 20, { rx: 5, fill: "#9A9AA6" });
+  rect(pk, -14, -10, 28, 20, { rx: 5, fill: K.boardMute });
   ups.push(t => {
     const p = eio(seg(t, 2.9, 3.5));
     pk.setAttribute("opacity", Math.min(seg(t, 2.9, 3.0), 1 - seg(t, 3.4, 3.5)));
-    pk.setAttribute("transform", `translate(${lerp(620, 684, p)} 262)`);
+    pk.setAttribute("transform", `translate(${lerp(620, 672, p)} 260)`);
   });
 }
 // the wall of diff
 {
   const pile = g(A);
   [[22, 18], [11, 9], [0, 0]].forEach(([dx, dy], i) => {
-    rect(pile, 700 + dx, 150 + dy, 226, 196, { rx: 12, fill: i === 2 ? "#201F27" : "#1B1A21", stroke: "#3B3A46", sw: 2 });
+    rect(pile, 688 + dx, 150 + dy, 214, 196, { rx: 12, fill: i === 2 ? K.board2 : "#231A12", stroke: K.boardLine, sw: 2 });
   });
-  text(pile, 718, 182, STR.files, { size: 17, weight: 700, fill: "#F2F0EA" });
-  text(pile, 718, 210, "+1,284", { size: 17, weight: 600, fill: "#4CC38A", cls: "mono" });
-  text(pile, 806, 210, "-397", { size: 17, weight: 600, fill: "#F2777A", cls: "mono" });
+  icon(pile, "files", 712, 178, 22, K.boardMute, 1.8);
+  text(pile, 734, 184, STR.files, { size: 16, weight: 600, fill: K.boardInk, fit: 160 });
+  text(pile, 706, 214, "+1,284", { size: 16, weight: 600, fill: K.boardGuac, cls: "mono" });
+  text(pile, 790, 214, "\u2212397", { size: 16, weight: 600, fill: K.boardSalsa, cls: "mono" });
   const lines = [[1, 150], [-1, 90], [1, 170], [1, 120], [-1, 140], [1, 80], [-1, 110], [1, 160]];
   lines.forEach(([s, w], i) => {
-    rect(pile, 716, 226 + i * 14.5, 194, 11, { rx: 3, fill: s > 0 ? "#173A2A" : "#42191C" });
-    rect(pile, 722, 229.5 + i * 14.5, w, 4, { rx: 2, fill: s > 0 ? "#4CC38A" : "#F2777A", extra: { opacity: .75 } });
+    rect(pile, 704, 228 + i * 14.5, 182, 11, { rx: 3, fill: s > 0 ? "#22301E" : "#3A1D18" });
+    rect(pile, 710, 231.5 + i * 14.5, w * .88, 4, { rx: 2, fill: s > 0 ? K.boardGuac : K.boardSalsa, extra: { opacity: .8 } });
   });
   reveal(pile, 3.0, 3.6, 14);
 }
 // pain points (the same three questions get answered in scene C)
 [[32, STR.q1, 3.55], [345, STR.q2, 3.95], [658, STR.q3, 4.35]].forEach(([x, q, at]) => {
   const grp = g(A);
-  rect(grp, x, 410, 270, 64, { rx: 14, fill: "#2A1A1D", stroke: "#E5484D", sw: 2 });
-  el("circle", { cx: x + 34, cy: 442, r: 17, fill: "#E5484D" }, grp);
-  text(grp, x + 34, 450, "?", { size: 24, weight: 700, fill: "#fff", anchor: "middle" });
-  text(grp, x + 64, 449, q, { size: lang === "ko" ? 18 : 18.5, weight: 700, fill: "#FFE9E9" });
+  rect(grp, x, 408, 270, 66, { rx: 12, fill: "#2A1914", stroke: K.salsa, sw: 2 });
+  icon(grp, "help", x + 34, 441, 30, K.boardSalsa, 1.9);
+  text(grp, x + 62, 447, q, { size: 18, weight: 600, fill: K.boardInk, fit: 196 });
   reveal(grp, at, at + .4, 14);
 });
 {
-  const cap = text(A, W / 2, 506, STR.cap, { size: 17, weight: 500, fill: "#B7B4AA", anchor: "middle" });
+  const cap = text(A, W / 2, 508, STR.cap, { size: 17, weight: 500, fill: "#D9C8A8", anchor: "middle", fit: 880 });
   ups.push(t => cap.setAttribute("opacity", seg(t, 4.1, 4.6)));
 }
 
-// ============================================================ end card
+// ============================================================ end card (dark again, so the loop is seamless)
 const E = g(svg, { opacity: 0 });
-rect(E, 0, 0, W, H, { fill: "#FCFCFA" });
-rect(E, 0, 0, W, H, { fill: "url(#dots)" });
-logo(E, 370, 38, false);
+rect(E, 0, 0, W, H, { fill: K.board });
+rect(E, 0, 0, W, H, { fill: "url(#warm)" });
+logo(E, 370, 30, true);
 {
-  const bx = 150, by = 118, bw = 270, bh = 96;
+  const bx = 130, by = 100, bw = 290, bh = 84;
   const black = g(E);
-  rect(black, bx, by, bw, bh, { rx: 22, fill: "#15141A" });
-  text(black, bx + 36, by + 62, "?", { size: 52, fill: "#FFC21A", cls: "anton", weight: 400 });
-  text(black, bx + 78, by + 59, STR.black, { size: lang === "ko" ? 34 : 36, weight: 700, fill: "#fff" });
+  rect(black, bx, by, bw, bh, { rx: 16, fill: "#0C0806", stroke: K.boardLine, sw: 2.5 });
+  icon(black, "eyeOff", bx + 50, by + bh / 2, 40, K.boardMute, 2.2);
+  text(black, bx + 92, by + 52, STR.black, { size: lang === "ko" ? 30 : 32, weight: 600, fill: K.boardInk, fit: 180 });
   reveal(black, 12.3, 12.7, 12);
   const arrow = g(E);
-  el("path", { d: "M436 166 L520 166", stroke: "#1a1a1a", "stroke-width": 6, "stroke-linecap": "round", fill: "none" }, arrow);
-  el("path", { d: "M502 146 L524 166 L502 186", stroke: "#1a1a1a", "stroke-width": 6, "stroke-linecap": "round", "stroke-linejoin": "round", fill: "none" }, arrow);
+  icon(arrow, "arrow", 480, by + bh / 2, 48, K.nacho, 3.2);
   ups.push(t => arrow.setAttribute("opacity", seg(t, 12.7, 13.0)));
   const wx = 540, wh = g(E);
-  rect(wh, wx - 6, by - 6, bw + 12, bh + 12, { rx: 26, fill: "#FFC21A", extra: { filter: "url(#glow)", opacity: .45 } });
-  rect(wh, wx, by, bw, bh, { rx: 22, fill: "#fff", stroke: "#FFC21A", sw: 5 });
-  el("circle", { cx: wx + 52, cy: by + 48, r: 22, fill: "none", stroke: "#1F7A3A", "stroke-width": 5 }, wh);
-  el("path", { d: `M${wx + 42} ${by + 48} l7 7 l13 -15`, fill: "none", stroke: "#1F7A3A", "stroke-width": 5.5, "stroke-linecap": "round", "stroke-linejoin": "round" }, wh);
-  text(wh, wx + 88, by + 59, STR.white, { size: lang === "ko" ? 34 : 36, weight: 700, fill: "#1a1a1a" });
+  rect(wh, wx - 6, by - 6, bw + 12, bh + 12, { rx: 22, fill: K.nacho, extra: { filter: "url(#glow)", opacity: .4 } });
+  rect(wh, wx, by, bw, bh, { rx: 16, fill: K.paper, stroke: K.nacho, sw: 4 });
+  rect(wh, wx + 18, by + 22, 40, 40, { rx: 10, fill: K.guac });
+  icon(wh, "eye", wx + 38, by + 42, 24, "#fff", 2);
+  text(wh, wx + 74, by + 52, STR.white, { size: lang === "ko" ? 30 : 32, weight: 600, fill: K.ink, fit: 200 });
   ups.push(t => {
     const p = back(seg(t, 13.0, 13.5));
     wh.setAttribute("opacity", seg(t, 13.0, 13.2));
@@ -408,33 +508,38 @@ logo(E, 370, 38, false);
 }
 {
   const t1 = g(E);
-  text(t1, W / 2, 300, STR.tag1, { size: lang === "ko" ? 34 : 38, weight: 700, fill: "#1a1a1a", anchor: "middle" });
-  text(t1, W / 2, 345, STR.tag2, { size: lang === "ko" ? 34 : 38, weight: 700, fill: "#1F7A3A", anchor: "middle" });
+  const loud = { size: STR.loudSize, anchor: "middle", fit: 900 };
+  if (lang === "ko") {
+    text(t1, W / 2, 282, STR.loud1, { ...loud, weight: 800, fill: K.boardInk });
+    text(t1, W / 2, 342, STR.loud2, { ...loud, weight: 800, fill: K.nacho });
+  } else {
+    text(t1, W / 2, 285, STR.loud1, { ...loud, weight: 400, fill: K.boardInk, cls: "anton" });
+    text(t1, W / 2, 348, STR.loud2, { ...loud, weight: 400, fill: K.nacho, cls: "anton" });
+  }
   reveal(t1, 13.4, 13.8, 10);
   const t2 = g(E);
-  text(t2, W / 2, 386, STR.tag3, { size: 18, weight: 500, fill: "#6B6B66", anchor: "middle" });
-  const cmd = "npx -y @mafianacho/nacholens@latest demo";
-  rect(t2, 190, 418, 580, 54, { rx: 12, fill: "#15141A" });
-  text(t2, 214, 453, "$", { size: 20, weight: 600, fill: "#FFC21A", cls: "mono" });
-  text(t2, 244, 453, cmd, { size: 20, weight: 500, fill: "#F2F0EA", cls: "mono" });
+  text(t2, W / 2, 393, STR.tag3, { size: 18, weight: 400, fill: "#D9C8A8", anchor: "middle", fit: 860 });
+  rect(t2, 190, 414, 580, 54, { rx: 10, fill: K.board2, stroke: K.boardLine, sw: 2 });
+  icon(t2, "terminal", 220, 441, 22, K.nacho, 2);
+  text(t2, 246, 447, "npx -y @mafianacho/nacholens@latest demo", { size: 19, weight: 500, fill: K.boardInk, cls: "mono" });
   reveal(t2, 13.7, 14.1, 10);
-  const brand = text(E, W / 2, 510, STR.brand, { size: 13, weight: 500, fill: "#8B8B85", anchor: "middle" });
+  const brand = text(E, W / 2, 510, STR.brand, { size: 14, weight: 400, fill: K.boardMute, anchor: "middle" });
   ups.push(t => brand.setAttribute("opacity", seg(t, 13.9, 14.3)));
 }
 ups.push(t => E.setAttribute("opacity", eo(seg(t, 12.0, 12.5))));
 
 // ============================================================ magnifier wipe (black box -> white box)
 const lens = g(svg, { opacity: 0 });
-el("line", { x1: 0, y1: -270, x2: 0, y2: 270, stroke: "#FFC21A", "stroke-width": 4 }, lens);
-el("circle", { r: 78, fill: "none" }, lens);
-el("line", { x1: 55, y1: 55, x2: 112, y2: 112, stroke: "#FFC21A", "stroke-width": 18, "stroke-linecap": "round" }, lens);
-el("circle", { r: 78, fill: "none", stroke: "#FFC21A", "stroke-width": 11 }, lens);
-el("path", { d: "M-48 -30 A 58 58 0 0 1 -14 -58", fill: "none", stroke: "#fff", "stroke-width": 7, "stroke-linecap": "round", opacity: .9 }, lens);
+el("line", { x1: 0, y1: -270, x2: 0, y2: 270, stroke: K.nacho, "stroke-width": 3 }, lens);
+el("line", { x1: 56, y1: 56, x2: 112, y2: 112, stroke: K.nacho, "stroke-width": 16, "stroke-linecap": "round" }, lens);
+el("circle", { r: 78, fill: "none", stroke: K.nacho, "stroke-width": 10 }, lens);
+el("circle", { r: 67, fill: "none", stroke: K.paper, "stroke-width": 2, opacity: .5 }, lens);
+el("path", { d: "M-50 -26 A 56 56 0 0 1 -18 -54", fill: "none", stroke: K.paper, "stroke-width": 6, "stroke-linecap": "round" }, lens);
 ups.push(t => {
   const p = eio(seg(t, 5.0, 6.5));
   const x = lerp(-120, W + 130, p);
   lens.setAttribute("opacity", t >= 4.95 && t <= 6.55 ? 1 : 0);
-  lens.setAttribute("transform", `translate(${x} 270)`);
+  lens.setAttribute("transform", `translate(${x} 270) rotate(${(1 - p) * -8})`);
   clipARect.setAttribute("x", Math.min(W, Math.max(0, x)));
   clipARect.setAttribute("width", Math.max(0, W - Math.max(0, x)));
   A.setAttribute("visibility", x >= W ? "hidden" : "visible");
@@ -446,10 +551,18 @@ const warp = t => t < 6.4 ? t : t <= 14.0 ? 6.4 + (t - 6.4) * (5.6 / 7.6) : 12.0
 window.renderFrame = t => { const u = warp(t); ups.forEach(f => f(u)); };
 const lp = (new URLSearchParams(location.search)).get("t");
 window.READY = Promise.all([
-  document.fonts.load('700 16px "Nacho Sans"'), document.fonts.load('500 16px "Nacho Sans"'),
-  document.fonts.load('600 16px "Nacho Sans"'), document.fonts.load('500 16px "Nacho Mono"'),
-  document.fonts.load('600 16px "Nacho Mono"'), document.fonts.load('400 16px "Anton"'),
-  document.fonts.load("700 16px 'Noto Sans CJK KR'", "가나다")
-]).then(() => { window.renderFrame(lp ? parseFloat(lp) : 0); return true; });
+  document.fonts.load('400 16px "Nacho Sans"'), document.fonts.load('500 16px "Nacho Sans"'),
+  document.fonts.load('600 16px "Nacho Sans"'), document.fonts.load('700 16px "Nacho Sans"'),
+  document.fonts.load('500 16px "Nacho Mono"'), document.fonts.load('400 16px "Anton"'),
+  document.fonts.load('600 16px "Pretendard Variable"', "가나다").catch(() => 0),
+  document.fonts.load("600 16px 'Noto Sans CJK KR'", "가나다").catch(() => 0)
+]).then(() => {
+  for (const [t, max] of fits) {       // shrink any text that would leave its box
+    let s = parseFloat(t.getAttribute("font-size"));
+    while (t.getBBox().width > max && s > 11) { s -= .5; t.setAttribute("font-size", s); }
+  }
+  window.renderFrame(lp ? parseFloat(lp) : 0);
+  return true;
+});
 })();
 </script>

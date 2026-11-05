@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Capture frames of blackbox-to-whitebox.html with headless Chrome (DevTools protocol, no npm packages).
-//   node docs/motion/render.mjs --lang en --out /tmp/frames-en [--fps 12.5] [--at 7.5,9.4]   (--at = only those seconds)
+//   node docs/motion/render.mjs --lang en --out /tmp/frames-en [--fps 25] [--at 7.5,9.4]   (--at = only those seconds)
 // Needs Node >= 22 (global WebSocket) and a Chrome/Chromium: set CHROME=/path/to/chrome if it is not on PATH.
 // Encode the frames with encode.py.
 import { spawn } from "node:child_process";
@@ -10,7 +10,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const args = Object.fromEntries(process.argv.slice(2).reduce((a, v, i, all) => (v.startsWith("--") ? [...a, [v.slice(2), all[i + 1]]] : a), []));
 const lang = args.lang || "en";
-const fps = parseFloat(args.fps || "12.5");
+const fps = parseFloat(args.fps || "25");
 const out = resolve(args.out || `frames-${lang}`);
 const chrome = process.env.CHROME || "google-chrome";
 process.env.TMPDIR = "/tmp"; // Chrome refuses a profile/socket path that is too long
