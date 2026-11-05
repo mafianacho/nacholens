@@ -42,7 +42,7 @@
   function cls(e, name, on) { if (e && e.classList) e.classList[on ? "add" : "remove"](name); }
   var P = {
     check: "M5 12.5l4.5 4.5L19 7.5", play: "M7 4.5v15l12-7.5z", pause: "M8 5v14M16 5v14", prev: "M15 6l-6 6 6 6", next: "M9 6l6 6-6 6",
-    first: "M6 5v14M17 6l-7 6 7 6", replay: "M4 12a8 8 0 1 0 2.3-5.7M4 4v4h4", chevron: "m6 9 6 6 6-6", expand: "M14 4h6v6M10 20H4v-6M20 4l-6 6M4 20l6-6",
+    first: "M6 5v14M17 6l-7 6 7 6", copy: "M9 9h11v11H9zM5 15V4h11", tree: "M3 4h7v5H3zM14 10h7v4h-7zM14 17h7v4h-7zM6.5 9v10.5H14M6.5 12H14", replay: "M4 12a8 8 0 1 0 2.3-5.7M4 4v4h4", chevron: "m6 9 6 6 6-6", expand: "M14 4h6v6M10 20H4v-6M20 4l-6 6M4 20l6-6",
     git: "M6 3v12M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 9a9 9 0 0 1-9 9",
     client: "M8 3h8a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1ZM11 18h2",
     gateway: "M12 3 4 7v5c0 4.4 3.4 8.3 8 9 4.6-.7 8-4.6 8-9V7l-8-4Z",
@@ -80,6 +80,11 @@
     depthWord: "깊이", depthName: { diff: "변경만", brief: "한눈에", full: "자세히" }, depthHint: { diff: "변경이 닿는 부분만 모델링", brief: "전체 구성만, 세부 없음", full: "전체 구성과 세부까지" },
     lgReq: "요청이 이동 (주황 점)", lgRes: "응답이 돌아옴 (먹색 점)", lgWork: "컴포넌트 안에서 처리 중", lgPast: "이미 지나간 길", lgChanged: "이번 작업으로 생기거나 바뀐 것",
     lgOpen: "상자를 누르면 내부로 들어가 같은 흐름을 봅니다", lgInt: "내부: 부품 사이 호출 (초록 점)",
+    cp: { text: "텍스트 복사", ctx: "맥락 복사", textOf: function (x) { return "텍스트만 복사 · " + x; }, ctxOf: function (x) { return "계층을 포함해 맥락 복사 · " + x; }, done: "복사했습니다", fail: "복사하지 못했습니다",
+      intro: function (p) { return "nacholens 화면에서 사용자가 가리킨 위치입니다 (" + p + "). 이 위치를 기준으로 답해 주세요."; },
+      source: "소스", hierarchy: "계층", here: "여기", product: "제품", flow: "흐름", step: "단계", component: "컴포넌트", part: "부품", table: "테이블", endpoint: "엔드포인트",
+      trigger: "진입 요청", summary: "요약", kind: "종류", role: "역할", detail: "설명", narration: "단계 설명", path: "지나는 경로", request: "요청", response: "응답", route: "경로",
+      steps: "단계", inside: "내부", inFlow: "화면의 흐름에서 이 위치를 지나는 단계", columns: "컬럼", reqFields: "보내는 필드", resFields: "받는 필드", connects: "연결", more: function (n) { return "… 외 " + n + "개"; }, comps: "관련 컴포넌트", change: "변경", sent: "보내는 데이터", received: "받는 데이터" },
     ui: { overlay: "변경 강조", nav: "흐름과 단계", search: "흐름 검색", stage: "데이터 흐름 애니메이션", canvas: "아키텍처와 요청 흐름", transport: "재생 제어", review: "검토", insp: "현재 단계 설명" }
   } : {
     chg: { added: "New", modified: "Changed", removed: "Removed" },
@@ -107,6 +112,11 @@
     depthWord: "Depth", depthName: { diff: "Changes only", brief: "Overview", full: "Detailed" }, depthHint: { diff: "Only the parts the change touches", brief: "The whole composition, no detail", full: "The whole composition and its detail" },
     lgReq: "A request moves (orange dot)", lgRes: "The response comes back (ink dot)", lgWork: "Working inside a component", lgPast: "Path already taken", lgChanged: "Added or changed in this work",
     lgOpen: "Click a box to see the same flow inside it", lgInt: "Inside: a call between parts (green dot)",
+    cp: { text: "Copy text", ctx: "Copy with context", textOf: function (x) { return "Copy text only · " + x; }, ctxOf: function (x) { return "Copy with context (hierarchy) · " + x; }, done: "Copied", fail: "Could not copy",
+      intro: function (p) { return "This is the place the user pointed at in the nacholens page (" + p + "). Answer about this place."; },
+      source: "Source", hierarchy: "Hierarchy", here: "here", product: "Product", flow: "Flow", step: "Step", component: "Component", part: "Part", table: "Table", endpoint: "Endpoint",
+      trigger: "Trigger", summary: "Summary", kind: "Kind", role: "Role", detail: "Description", narration: "Narration", path: "Path", request: "Request", response: "Response", route: "Route",
+      steps: "Steps", inside: "Inside", inFlow: "Steps of the flow on screen that pass here", columns: "Columns", reqFields: "Request fields", resFields: "Response fields", connects: "Connects to", more: function (n) { return "… +" + n + " more"; }, comps: "Components", change: "Change", sent: "Sent", received: "Received" },
     ui: null
   };
 
@@ -515,7 +525,7 @@
     if (SC.mode === "arch") { archLayout(); planRoutes(); drawArch(); } else { detailLayout(); planRoutes(); drawDetail(); }
     cls($("sv-stage"), "in-detail", SC.mode === "detail");
     var cr = $("sv-crumbs"); clear(cr); cr.hidden = SC.mode !== "detail";
-    if (SC.mode === "detail") put(cr, [h("button", { type: "button", "class": "back", on: { click: closeDetail } }, icon("prev"), W.whole), h("span", { "class": "here", text: first(comp[SC.focus].label) }), h("span", { "class": "sub", text: W.inside })]);
+    if (SC.mode === "detail") put(cr, [h("button", { type: "button", "class": "back", on: { click: closeDetail } }, icon("prev"), W.whole), h("span", { "class": "here", text: first(comp[SC.focus].label) }), h("span", { "class": "sub", text: W.inside }), cpGroup({ t: "comp", id: SC.focus }, first(comp[SC.focus].label), false)]);
     var stage = $("sv-stage"), old = stage.lastHiddenNote; if (old && old.parentNode) old.parentNode.removeChild(old);
     stage.lastHiddenNote = null;
     if (SC.hidden > 0) stage.lastHiddenNote = stage.appendChild(h("div", { "class": "hidden-note", text: W.hidden(SC.hidden, SC.mode === "arch") }));
@@ -552,6 +562,7 @@
       }
       changeTag(g, x, y, p.w, compTag(id));
       NODE[id] = g; L.nodes.appendChild(g);
+      L.nodes.appendChild(svgCp(id, p, { t: "comp", id: id }, first(c.label)));
     });
   }
   function drawDetail() {
@@ -615,6 +626,7 @@
     if (p.kind !== "stub") clickable(g, W.details(itemName(id)), function () { selectItem(id); });
     g.opb = g.appendChild(s("g", { "class": "opb" }));
     NODE[id] = g; L.nodes.appendChild(g);
+    if (p.kind !== "stub") L.nodes.appendChild(svgCp(id, p, { t: "item", id: id }, itemName(id)));
   }
 
   /* ═════════════════ Stage: state of the current step (classes only; no re-draw) ═════════════════ */
@@ -870,16 +882,17 @@
       if (!open) return;
       list.forEach(function (u) {
         var cur = u.id === S.uc, ch = S.overlay ? changedSteps(u) : [], rv = ch.filter(function (st) { return ticks["rv:" + u.id + "/" + st.id]; }).length;
-        put(side, h("button", { type: "button", "class": "uc", "data-uc": u.id, "aria-current": cur ? "true" : null, on: { click: function () { if (!cur) selectUc(u.id); } } },
+        var ucBtn = h("button", { type: "button", "class": "uc", "data-uc": u.id, "aria-current": cur ? "true" : null, on: { click: function () { if (!cur) selectUc(u.id); } } },
           h("span", { "class": "main" }, h("span", { "class": "t kr", text: u.title }), h("span", { "class": "m ell2", text: u.trigger, title: u.trigger })),
-          ch.length ? h("span", { "class": "badge", "data-tone": rv === ch.length ? "success" : "warning", title: W.reviewedTitle }, W.reviewBadge(rv, ch.length)) : null));
+          ch.length ? h("span", { "class": "badge", "data-tone": rv === ch.length ? "success" : "warning", title: W.reviewedTitle }, W.reviewBadge(rv, ch.length)) : null);
+        put(side, h("div", { "class": "ucrow" + (cur ? " cur" : "") }, ucBtn, cpGroup({ t: "flow", u: u.id }, u.title, false)));
         if (!cur) return;
         var ol = h("ol", { "class": "steps", id: "sv-steps" });
         u.steps.forEach(function (st, i) {
           var c = chgOf(u, st), pick = function () { A.playing = false; go(i, true); };
           var li = h("li", { "class": "st" + (i < A.step ? " done" : ""), "data-step": st.id, "aria-current": i === A.step ? "step" : null, tabindex: 0,
             on: { click: pick, keydown: function (e) { if (e.key === "Enter") pick(); } } },
-            h("span", { "class": "n" }, String(i + 1)), h("span", { "class": "lbl ell2 kr", text: st.label, title: st.label }),
+            h("span", { "class": "n" }, String(i + 1)), h("span", { "class": "lblw" }, h("span", { "class": "lbl ell2 kr", text: st.label, title: st.label }), cpGroup({ t: "step", u: u.id, i: i }, st.label, false)),
             c ? h("span", { "class": "chg", "data-tone": ST[c.change][0] }, ST[c.change][1]) : null,
             c ? tickBox("rv:" + u.id + "/" + st.id) : null);
           if (i === A.step) curLi = li;
@@ -890,6 +903,149 @@
     });
     if (!side.firstChild) put(side, h("div", { "class": "empty", text: W.noMatch }));
     if (curLi && curLi.scrollIntoView) curLi.scrollIntoView({ block: "nearest" }); // the step being played stays in view in a long list
+  }
+
+  /* ═════════════════ Copy a place for an LLM: its text only, or the text with its hierarchy ═════════════════ */
+  var CPW = W.cp;
+  function oneLine(l) { return String(l == null ? "" : l).split("\n").map(function (x) { return x.trim(); }).filter(Boolean).join(" — "); }
+  function lst(a) { return a.map(function (x) { return "- " + x; }); }
+  function fieldNames(a) { return a && a.length ? a.map(function (f) { return f.name; }).join(", ") : "—"; }
+  function stepTitle(u, i) { return CPW.step + " " + (i + 1) + ": " + u.steps[i].label; }
+  function pathNames(st) { return pathOf(st).map(function (id) { return oneLine(comp[id].label); }).join(" → "); }
+  function evList(ev) { return (ev || []).length ? [W.evidence + ":"].concat(lst((ev || []).map(evRef))) : []; }
+  function changeLine(c) { return c ? CPW.change + ": " + ST[c.change || c][1] + (c.note ? " — " + c.note : "") : null; }
+  function scopeChain(cid, hit) { // the flow (and step) on screen, when the place is part of it
+    var u = uc(), chain = [CPW.product + ": " + model.product.name];
+    if (u && u.steps.some(hit)) {
+      chain.push(CPW.flow + ": " + u.title);
+      if (A.step >= 0 && hit(u.steps[A.step])) chain.push(stepTitle(u, A.step));
+    }
+    return chain;
+  }
+  function passList(hit) { var u = uc(); return u ? u.steps.map(function (st, i) { return hit(st) ? (i + 1) + ". " + st.label : null; }).filter(Boolean) : []; }
+
+  function placeOf(spec) { // -> { chain: ancestors down to the place, kids: its direct children, text: lines, facts: lines }
+    var u, st, c, p, r, hit, ch, chain, f;
+    if (spec.t === "flow") {
+      u = ucById[spec.u];
+      return { chain: [CPW.product + ": " + model.product.name, CPW.flow + ": " + u.title],
+        kids: u.steps.map(function (s2, i) { return (i + 1) + ". " + s2.label; }),
+        text: [u.title, u.trigger, u.summary],
+        facts: [CPW.flow + ": " + u.title, CPW.trigger + ": " + u.trigger, CPW.summary + ": " + u.summary, CPW.comps + ": " + ucComps(u).map(function (id) { return oneLine(comp[id].label); }).join(", ")]
+          .concat(u.steps.length ? [CPW.steps + ":"].concat(lst(u.steps.map(function (s2, i) { var k = S.overlay && stepChg[u.id + "/" + s2.id]; return (i + 1) + ". " + s2.label + (k ? " [" + ST[k.change][1] + "]" : ""); }))) : []) };
+    }
+    if (spec.t === "step") {
+      u = ucById[spec.u]; st = u.steps[spec.i]; ch = S.overlay ? stepChg[u.id + "/" + st.id] : null; f = [];
+      f.push(stepTitle(u, spec.i) + " (" + (spec.i + 1) + "/" + u.steps.length + ")", CPW.kind + ": " + (STEP_KO[st.kind] || st.kind), CPW.path + ": " + pathNames(st), CPW.narration + ": " + st.narration);
+      if (st.route) f.push(CPW.route + ": " + st.route);
+      if (st.request) f.push(CPW.request + ": " + st.request);
+      if (st.response) f.push(CPW.response + ": " + st.response);
+      (st.payload || []).forEach(function (pl) {
+        f.push((pl.leg === "request" ? CPW.sent : CPW.received) + (pl.title ? " · " + pl.title : "") + ":");
+        if (pl.body) f.push(pl.body);
+        (pl.bind || []).concat(pl.columns || []).forEach(function (b) { f.push("- " + b.name + ": " + b.value); });
+      });
+      (st.transforms || []).forEach(function (tf) { f.push(tf.at + ": " + tf["in"].type + " → " + tf.out.type); });
+      if (ch) f.push(changeLine(ch));
+      return { chain: [CPW.product + ": " + model.product.name, CPW.flow + ": " + u.title, stepTitle(u, spec.i)],
+        kids: pathOf(st).filter(function (id, i, a) { return a.indexOf(id) === i; }).map(function (id) { return CPW.component + ": " + oneLine(comp[id].label); }),
+        text: [st.label, st.narration], facts: f.concat(evList(st.evidence)) };
+    }
+    if (spec.t === "comp") {
+      c = comp[spec.id]; hit = function (s2) { return pathOf(s2).indexOf(c.id) >= 0; }; chain = scopeChain(c.id, hit).concat(CPW.component + ": " + oneLine(c.label)); f = [];
+      f.push(CPW.component + ": " + oneLine(c.label), CPW.kind + ": " + KIND[c.kind]);
+      if (c.detail) f.push(CPW.detail + ": " + c.detail);
+      if (S.overlay && compChg[c.id]) f.push(changeLine(compChg[c.id]));
+      var kids = (c.parts || []).map(function (x) { return CPW.part + ": " + x.label; }).concat((c.tables || []).map(function (x) { return CPW.table + ": " + x.name; }), (c.endpoints || []).map(function (x) { return CPW.endpoint + ": " + x.method + " " + x.path; }));
+      if (kids.length) f.push(CPW.inside + ":"), f.push.apply(f, lst(kids.map(function (k) { return k; })));
+      var ps = passList(hit); if (ps.length) f.push(CPW.inFlow + " (" + uc().title + "):"), f.push.apply(f, lst(ps));
+      return { chain: chain, kids: kids, text: [oneLine(c.label), KIND[c.kind], c.detail], facts: f.concat(evList(c.evidence)) };
+    }
+    // an item picked inside a component: part / table / endpoint
+    p = SC.pos[spec.id]; r = p.ref; c = comp[SC.focus]; f = [];
+    hit = function (s2) { return p.kind === "part" ? traceIn(s2, c.id).indexOf(spec.id) >= 0 : targetsIn(s2, c).indexOf(spec.id) >= 0; };
+    var kindWord = p.kind === "part" ? CPW.part : p.kind === "table" ? CPW.table : CPW.endpoint, name = p.kind === "part" ? r.label : p.kind === "table" ? r.name : r.method + " " + r.path;
+    chain = scopeChain(c.id, hit).concat(CPW.component + ": " + oneLine(c.label), kindWord + ": " + name);
+    ch = S.overlay ? dchg[c.id + "|" + p.kind + "|" + (p.kind === "table" ? r.name : r.id)] : null;
+    f.push(kindWord + ": " + name, CPW.component + ": " + oneLine(c.label));
+    var text = [name];
+    if (p.kind === "part") {
+      f.push(CPW.role + ": " + (ROLE_KO[r.role] || r.role)); text.push(ROLE_KO[r.role] || r.role);
+      if (r.connects && comp[r.connects]) { f.push(CPW.connects + ": " + oneLine(comp[r.connects].label)); text.push(oneLine(comp[r.connects].label)); }
+    }
+    if (r.detail) { f.push(CPW.detail + ": " + r.detail); text.push(r.detail); }
+    if (p.kind === "table") { f.push(CPW.columns + ":"); r.columns.forEach(function (col) { var l = col.name + (col.type ? " (" + col.type + ")" : ""); f.push("- " + l); text.push(l); }); }
+    if (p.kind === "endpoint") {
+      f.push(CPW.reqFields + ": " + fieldNames(r.request), CPW.resFields + ": " + fieldNames(r.response)); text.push(CPW.reqFields + ": " + fieldNames(r.request), CPW.resFields + ": " + fieldNames(r.response));
+      if (r.auth) { f.push(W.auth + ": " + r.auth); text.push(W.auth + ": " + r.auth); }
+    }
+    if (p.kind === "part") {
+      var byId = {}; (c.parts || []).forEach(function (x) { byId[x.id] = x; });
+      var ins = (c.wires || []).filter(function (w) { return w.to === r.id; }), outs = (c.wires || []).filter(function (w) { return w.from === r.id; });
+      if (ins.length) f.push(W.calledBy + ":"), f.push.apply(f, lst(ins.map(function (w) { return (byId[w.from] ? byId[w.from].label : w.from) + " (" + w.label + ")"; })));
+      if (outs.length) f.push(W.calls + ":"), f.push.apply(f, lst(outs.map(function (w) { return (byId[w.to] ? byId[w.to].label : w.to) + " (" + w.label + ")"; })));
+    }
+    if (ch) f.push(changeLine(ch));
+    var ps2 = passList(hit); if (ps2.length) f.push(CPW.inFlow + " (" + uc().title + "):"), f.push.apply(f, lst(ps2));
+    return { chain: chain, kids: [], text: text, facts: f.concat(evList(r.evidence)) };
+  }
+  function indent(d, str) { var pad = ""; for (var i = 0; i < d; i++) pad += "  "; return pad + (d ? "└ " : "") + str; }
+  function copyOf(spec) { // { text, context } for one place
+    var d = placeOf(spec), tree = d.chain.map(function (x, i) { return indent(i, x) + (i === d.chain.length - 1 ? "   ← " + CPW.here : ""); });
+    d.kids.slice(0, 30).forEach(function (k) { tree.push(indent(d.chain.length, k)); });
+    if (d.kids.length > 30) tree.push(indent(d.chain.length, CPW.more(d.kids.length - 30)));
+    var src = model.source && model.source.repo ? [CPW.source + ": " + model.source.repo + (model.source.commit ? " @ " + String(model.source.commit).slice(0, 12) : "")] : [];
+    return {
+      text: d.text.filter(function (x) { return x != null && x !== ""; }).join("\n"),
+      context: [CPW.intro(model.product.name)].concat(src, ["", CPW.hierarchy + ":"], tree, [""], d.facts.filter(function (x) { return x != null && x !== ""; })).join("\n")
+    };
+  }
+  function legacyCopy(str) {
+    try {
+      var t = doc.createElement("textarea"); t.value = str; t.setAttribute("readonly", ""); t.setAttribute("aria-hidden", "true"); t.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+      doc.body.appendChild(t); if (t.select) t.select(); var ok = !!(doc.execCommand && doc.execCommand("copy")); doc.body.removeChild(t); return ok;
+    } catch (e) { return false; }
+  }
+  function writeClipboard(str, done) { // the async API where the page may use it, the old selection copy where a sandbox (artifact frames) blocks it
+    var nav = typeof navigator !== "undefined" ? navigator : null;
+    try { if (nav && nav.clipboard && nav.clipboard.writeText) { nav.clipboard.writeText(str).then(function () { done(true); }, function () { done(legacyCopy(str)); }); return; } } catch (e) { /* fall through */ }
+    done(legacyCopy(str));
+  }
+  function announce(msg) {
+    var live = $("sv-copy-status");
+    if (!live) { live = h("div", { id: "sv-copy-status", "class": "sr-only", role: "status", "aria-live": "polite" }); if (doc.body) doc.body.appendChild(live); }
+    live.textContent = msg;
+  }
+  function doCopy(spec, mode, btn) {
+    var out = copyOf(spec);
+    writeClipboard(mode === "ctx" ? out.context : out.text, function (ok) {
+      var cl = ok ? "done" : "fail"; cls(btn, cl, true); announce(ok ? CPW.done : CPW.fail);
+      setTimeout(function () { cls(btn, cl, false); }, 1600);
+    });
+    return out;
+  }
+  function cpBtn(spec, mode, label, withText) { // an HTML button (side list, inspector, crumbs)
+    var b = h("button", { type: "button", "class": "cp cp-" + mode, "data-copy": mode, "aria-label": label, title: label,
+      on: { click: function (e) { e.stopPropagation(); doCopy(spec, mode, b); }, keydown: function (e) { if (e.key === "Enter" || e.key === " ") e.stopPropagation(); } } },
+      icon(mode === "ctx" ? "tree" : "copy"), (function () { var k = icon("check"); k.setAttribute("class", "i ok"); return k; })(), withText ? h("span", { text: mode === "ctx" ? CPW.ctx : CPW.text }) : null);
+    return b;
+  }
+  function cpGroup(spec, name, withText) { return h("span", { "class": "cpg" }, cpBtn(spec, "text", CPW.textOf(name), withText), cpBtn(spec, "ctx", CPW.ctxOf(name), withText)); }
+  function cpBar(spec, name) { var g = cpGroup(spec, name, true); g.setAttribute("class", "cpg cpbar"); return g; }
+  function svgCp(id, p, spec, name) { // two small buttons on the top edge of a box in the stage (just above it, clear of a two-line title); a sibling of the box so the box keeps its own click
+    var g = s("g", { "class": "cps", "data-for": id }), x0 = p.x - p.w / 2 + 8, y0 = p.y - p.h / 2 - 17;
+    [["text", "copy", CPW.textOf(name)], ["ctx", "tree", CPW.ctxOf(name)]].forEach(function (m, i) {
+      var b = s("g", { "class": "cpb cp-" + m[0], "data-copy": m[0], tabindex: "0", role: "button", "aria-label": m[2] }), bx = x0 + i * 26;
+      b.appendChild(s("title", {}, m[2]));
+      b.appendChild(s("rect", { x: bx, y: y0, width: 24, height: 20, rx: 5 }));
+      b.appendChild(s("path", { "class": "ic", d: P[m[1]], transform: "translate(" + (bx + 5) + "," + (y0 + 3) + ") scale(.58)" }));
+      b.appendChild(s("path", { "class": "ok", d: P.check, transform: "translate(" + (bx + 5) + "," + (y0 + 3) + ") scale(.58)" }));
+      var fire = function (e) { e.stopPropagation(); doCopy(spec, m[0], b); };
+      b.addEventListener("click", fire);
+      b.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fire(e); } });
+      g.appendChild(b);
+    });
+    return g;
   }
   function selectUc(id, step) {
     if (!ucById[id]) return;
@@ -909,6 +1065,7 @@
     var el = $("sv-insp"); clear(el);
     if (S.item && SC.mode === "detail" && SC.pos[S.item]) { itemInsp(el); return; }
     var u = uc();
+    put(el, cpBar(A.step < 0 ? { t: "flow", u: u.id } : { t: "step", u: u.id, i: A.step }, A.step < 0 ? u.title : u.steps[A.step].label));
     if (A.step < 0) {
       put(el, h("div", { "class": "ih" }, h("p", { "class": "eyebrow", text: W.overview }), h("p", { "class": "lead kr", text: u.summary })));
       var row = cmp[u.id], gone = row && review.compare.mode === "two-models" && S.overlay ? row.rows.filter(function (r) { return r.status === "removed" && r.before; }) : [];
@@ -950,6 +1107,7 @@
   function itemInsp(el) { // a part / table / endpoint picked inside a component: only what its card does not show
     var p = SC.pos[S.item], r = p.ref, c = comp[SC.focus], u = uc(), id = S.item;
     var kindKo = p.kind === "part" ? ROLE_KO[r.role] || r.role : p.kind === "table" ? W.table : W.endpoint;
+    put(el, cpBar({ t: "item", id: id }, itemName(id)));
     put(el, h("div", { "class": "ih" },
       h("button", { type: "button", "class": "link", style: "font-size:12px;margin-bottom:12px", on: { click: function () { S.item = null; paintStepState(); renderInsp(); } } }, A.step >= 0 ? W.backStep(A.step + 1) : W.backOverview),
       h("p", { "class": "eyebrow", text: W.insideOf(kindKo, first(c.label)) }),
@@ -1047,6 +1205,6 @@
     tagged: function () { return Object.keys(NODE).filter(function (id) { return NODE[id].getAttribute("class").indexOf("chg-") >= 0; }).sort(); },
     selectUseCase: selectUc, go: go, play: play, pause: pause, next: next, prev: prev,
     openDetail: openDetail, closeDetail: closeDetail, switchFocus: switchFocus, selectItem: selectItem,
-    setOverlay: setOverlay, relayout: relayout
+    setOverlay: setOverlay, relayout: relayout, copyOf: copyOf
   };
 })();

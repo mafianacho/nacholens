@@ -63,7 +63,7 @@ function clock() {
 
 const IDS = ["app", "sv-model", "sv-changes", "sv-review-data", "sv-product", "sv-ref", "sv-depth", "sv-commit", "sv-overlay", "sv-q", "sv-list", "sv-stage", "sv-crumbs", "sv-caption", "sv-canvas", "sv-transport", "sv-review", "sv-insp"];
 // lang: most tests read the Korean words (the --lang ko build); the English default has its own tests
-function load({ model = demoModel(), changes = demoAutoChanges(), review = null, target = "html", hash = "", reduce = true, stage = [900, 520], storage = "memory", lang = "ko" } = {}) {
+function load({ model = demoModel(), changes = demoAutoChanges(), review = null, target = "html", hash = "", reduce = true, stage = [900, 520], storage = "memory", lang = "ko", clipboard = "ok" } = {}) {
   const html = buildPage(model, changes, { target, review, lang });
   const scripts = [...html.matchAll(/<script[^>]*>([^]*?)<\/script>/g)].map((m) => m[1]);
   const byId = {};
@@ -71,7 +71,7 @@ function load({ model = demoModel(), changes = demoAutoChanges(), review = null,
   for (const id of ["sv-ref", "sv-depth", "sv-overlay", "sv-crumbs", "sv-review"]) byId[id].hidden = true;
   byId["sv-model"]._text = scripts[0]; byId["sv-changes"]._text = scripts[1]; byId["sv-review-data"]._text = scripts[2];
   [byId["sv-stage"].clientWidth, byId["sv-stage"].clientHeight] = stage;
-  const docListeners = {}, hist = [], ck = clock(), mem = {};
+  const docListeners = {}, hist = [], ck = clock(), mem = {}, copied = [];
   const doc = {
     title: "", body: new El("body"), activeElement: null,
     getElementById: (id) => byId[id] ?? Object.values(byId).map((r) => r.find((c) => c.attrs.id === id)).find(Boolean) ?? null,
@@ -87,8 +87,10 @@ function load({ model = demoModel(), changes = demoAutoChanges(), review = null,
     document: doc, location: { hash }, history: { replaceState: (_s, _t, u) => hist.push(u) }, localStorage,
     matchMedia: () => ({ matches: reduce }), requestAnimationFrame: ck.raf, cancelAnimationFrame: ck.caf,
     setTimeout: ck.setTimeout, clearTimeout: ck.clearTimeout, performance: { now: ck.now },
-    ResizeObserver: class { observe() {} }, innerHeight: 900
+    ResizeObserver: class { observe() {} }, innerHeight: 900,
+    navigator: clipboard === "none" || clipboard === "stuck" ? {} : { clipboard: { writeText: (s) => (clipboard === "denied" ? Promise.reject(new Error("denied")) : (copied.push(s), Promise.resolve())) } }
   };
+  doc.execCommand = (c) => { if (c === "copy") copied.push("execCommand:" + (doc.body.children.at(-1)?.value ?? "")); return clipboard !== "stuck"; };
   ctx.window = ctx;
   vm.createContext(ctx);
   vm.runInContext(scripts[3], ctx);
@@ -97,7 +99,7 @@ function load({ model = demoModel(), changes = demoAutoChanges(), review = null,
   // values made inside the vm come from another realm; hand plain copies to the assertions
   const plain = (v) => (v === undefined || v === null ? v : JSON.parse(JSON.stringify(v)));
   const sv = new Proxy(ctx.__nacholens, { get(t, k) { const v = t[k]; return typeof v === "function" ? (...a) => plain(v.apply(t, a)) : typeof v === "object" ? plain(v) : v; } });
-  return { sv, rv: ctx.__nacholensReview, byId, hist, clock: ck, key, mem };
+  return { sv, rv: ctx.__nacholensReview, byId, hist, clock: ck, key, mem, copied, doc };
 }
 const layer = (byId, name) => byId["sv-canvas"].find(has("layer-" + name));
 const sideLabels = (byId) => byId["sv-list"].all(has("lbl")).map((e) => e.textContent);
@@ -611,4 +613,159 @@ test("wires: drawn as orthogonal runs with rounded corners, and the travelling p
   assert.ok(run, "a leg is travelling");
   const norm = (d) => d.split(/(?=[ML])/).map((q) => q.slice(1).trim()).sort().join("|");
   assert.ok(byId["sv-canvas"].all((e) => e.tagName === "path" && /(^| )lk( |$)/.test(e.attrs.class ?? "")).some((e) => norm(e.attrs.d) === norm(run.attrs.d)), "the packet runs on a drawn wire");
+});
+
+
+/* ───────── copy a place for an LLM: text only / with its hierarchy ───────── */
+const flush = () => new Promise((r) => setImmediate(r));
+const btn = (root, mode) => root.all((e) => e.attrs["data-copy"] === mode);
+
+test("copy: every flow row and every step row has a text-only and a with-context button; the stage, the inspector and the crumbs have them too", () => {
+  const { sv, byId } = load();
+  sv.selectUseCase("list-orders");
+  const L = uc("list-orders");
+  const list = byId["sv-list"];
+  const rows = list.all(has("ucrow"));
+  assert.ok(rows.length >= 2);
+  rows.forEach((r) => { assert.equal(btn(r, "text").length, 1); assert.equal(btn(r, "ctx").length, 1); });
+  const steps = list.all(has("st"));
+  assert.equal(steps.length, L.steps.length);
+  steps.forEach((r) => { assert.equal(btn(r, "text").length, 1); assert.equal(btn(r, "ctx").length, 1); });
+  // the stage: one pair per component box, as a sibling of the box (clicking it must not open the box)
+  const stage = byId["sv-canvas"];
+  const pairs = stage.all(has("cps"));
+  assert.equal(pairs.length, stage.all(has("nd")).length);
+  pairs.forEach((g) => assert.equal(g.attrs["data-for"] && btn(g, "text").length + btn(g, "ctx").length, 2));
+  // inspector: overview, a step and an item inside a component
+  assert.equal(btn(byId["sv-insp"], "text").length, 1); assert.equal(btn(byId["sv-insp"], "ctx").length, 1);
+  sv.go(0, false);
+  assert.equal(btn(byId["sv-insp"], "ctx").length, 1);
+  sv.openDetail("api");
+  assert.equal(btn(byId["sv-crumbs"], "ctx").length, 1, "crumbs copy the component you are inside");
+  const item = Object.keys(sv.scene().boxes).find((id) => !id.startsWith("stub:"));
+  sv.selectItem(item);
+  assert.equal(btn(byId["sv-insp"], "ctx").length, 1);
+  assert.ok(stage.all(has("cps")).length >= 1, "items inside have their own pair");
+});
+
+test("copy: a step with context lists product > flow > step > components with a marker on the place; text only is just the words", async () => {
+  const { sv, byId, copied } = load();
+  sv.selectUseCase("list-orders");
+  const L = uc("list-orders"), i = L.steps.findIndex((s) => s.id === "shipping"), st = L.steps[i];
+  sv.go(i, false);
+  const bar = byId["sv-insp"];
+  btn(bar, "text")[0].click(); await flush();
+  assert.equal(copied.at(-1), st.label + "\n" + st.narration, "text only: the step name and its narration, nothing else");
+  btn(bar, "ctx")[0].click(); await flush();
+  const ctx = copied.at(-1).split("\n");
+  const demo = demoModel();
+  assert.ok(ctx[0].includes(demo.product.name));
+  const tree = ctx.slice(ctx.findIndex((l) => l.startsWith("계층")) + 1);
+  assert.equal(tree[0], "제품: " + demo.product.name);
+  assert.equal(tree[1], "  └ 흐름: " + L.title);
+  assert.ok(tree[2].startsWith("    └ 단계 " + (i + 1) + ": " + st.label) && tree[2].endsWith("← 여기"));
+  assert.ok(tree[3].startsWith("      └ 컴포넌트: "), "the components the step passes hang under the step");
+  assert.ok(copied.at(-1).includes(demo.source.repo), "the repository the model describes");
+  for (const e of st.evidence) assert.ok(copied.at(-1).includes(`${e.file}:${e.lines[0]}`), "evidence ranges let the LLM open the code");
+});
+
+test("copy: a flow lists its steps below it; the overview inspector copies the flow", async () => {
+  const { sv, byId, copied } = load();
+  sv.selectUseCase("list-orders");
+  const L = uc("list-orders");
+  btn(byId["sv-insp"], "ctx")[0].click(); await flush();
+  const t = copied.at(-1);
+  assert.ok(t.includes("  └ 흐름: " + L.title + "   ← 여기"));
+  L.steps.forEach((s, i) => assert.ok(t.includes("    └ " + (i + 1) + ". " + s.label)));
+  btn(byId["sv-list"].find((e) => e.getAttribute("data-uc") === "list-orders").parentNode, "text")[0].click(); await flush();
+  assert.equal(copied.at(-1), [L.title, L.trigger, L.summary].join("\n"));
+});
+
+test("copy: a component box copies its name, kind and description; with context it sits under the flow and step on screen when it is part of them", async () => {
+  const { sv, byId, copied } = load();
+  sv.selectUseCase("list-orders");
+  const L = uc("list-orders");
+  sv.go(0, false);
+  const demo = demoModel(), st = L.steps[0], cid = st.to;
+  const c = demo.components.find((x) => x.id === cid);
+  const pair = byId["sv-canvas"].all(has("cps")).find((g) => g.attrs["data-for"] === cid);
+  assert.ok(pair);
+  let opened = false; const before = JSON.stringify(sv.state);
+  btn(pair, "text")[0].click(); await flush();
+  assert.equal(JSON.stringify(sv.state), before, "copying does not open the box or change the step");
+  assert.ok(copied.at(-1).startsWith(c.label.split("\n").map((x) => x.trim()).join(" — ")));
+  assert.ok(copied.at(-1).includes(c.detail));
+  btn(pair, "ctx")[0].click(); await flush();
+  const t = copied.at(-1);
+  assert.match(t, new RegExp("  └ 흐름: " + L.title.replace(/[()]/g, "\\$&")));
+  assert.match(t, /← 여기/);
+  assert.ok(t.includes("설명: " + c.detail));
+  // a component the flow does not touch has no flow above it
+  const away = demo.components.find((x) => !L.steps.some((s) => [s.from, ...(s.via ?? []), s.to].includes(x.id)));
+  if (away) assert.ok(!sv.copyOf({ t: "comp", id: away.id }).context.includes("흐름:"));
+});
+
+test("copy: inside a component, a part/table/endpoint copies with its component and flow above it", () => {
+  const { sv } = load();
+  for (const cid of ["api", "db", "idp", "shipping"]) {
+    const c = demoModel().components.find((x) => x.id === cid);
+    if (!c) continue;
+    sv.selectUseCase("list-orders");
+    sv.go(0, false);
+    sv.openDetail(cid);
+    const ids = Object.keys(sv.scene().boxes).filter((id) => !id.startsWith("stub:"));
+    for (const id of ids) {
+      const out = sv.copyOf({ t: "item", id });
+      assert.ok(out.text.length > 0);
+      assert.ok(out.context.includes("컴포넌트: " + c.label.split("\n").map((x) => x.trim()).join(" — ")), `${cid} ${id}`);
+      assert.match(out.context, /← 여기/);
+    }
+    sv.closeDetail();
+  }
+});
+
+test("copy: the English page speaks English in the copied text and in its buttons", async () => {
+  const { sv, byId, copied } = load({ lang: "en" });
+  sv.selectUseCase("list-orders"); sv.go(0, false);
+  const b = btn(byId["sv-insp"], "ctx")[0];
+  assert.match(b.getAttribute("aria-label"), /^Copy with context/);
+  b.click(); await flush();
+  assert.match(copied.at(-1), /Hierarchy:/);
+  assert.match(copied.at(-1), /← here/);
+  assert.ok(!/[가-힣]/.test(copied.at(-1).split("\n").filter((l) => /^(Source|Hierarchy|This is)|^ *└ (Flow|Step)|^Path|^Kind/.test(l)).join("\n").replace(/(Flow|Step \d+): .*/g, "$1")), "the page's own words are English");
+});
+
+test("copy: feedback and fallbacks - a copy shows done for a moment; a blocked clipboard falls back to selection copy; nothing works: fail", async () => {
+  let r = load();
+  r.sv.selectUseCase("list-orders"); r.sv.go(0, false);
+  let b = btn(r.byId["sv-insp"], "text")[0];
+  b.click(); await flush();
+  assert.ok(b.classList.contains("done"));
+  assert.equal(r.doc.getElementById("sv-copy-status")?.textContent ?? r.doc.body.find((e) => e.attrs.id === "sv-copy-status")?.textContent, "복사했습니다");
+  r.clock.advance(2000);
+  assert.ok(!b.classList.contains("done"), "the mark goes away");
+  r = load({ clipboard: "denied" });
+  r.sv.selectUseCase("list-orders"); r.sv.go(0, false);
+  btn(r.byId["sv-insp"], "text")[0].click(); await flush();
+  assert.ok(r.copied.at(-1).startsWith("execCommand:"), "denied clipboard -> selection copy");
+  r = load({ clipboard: "none" });
+  r.sv.selectUseCase("list-orders"); r.sv.go(0, false);
+  btn(r.byId["sv-insp"], "text")[0].click(); await flush();
+  assert.ok(r.copied.at(-1).startsWith("execCommand:"));
+  r = load({ clipboard: "stuck" });
+  r.sv.selectUseCase("list-orders"); r.sv.go(0, false);
+  b = btn(r.byId["sv-insp"], "text")[0]; b.click(); await flush();
+  assert.ok(b.classList.contains("fail"));
+});
+
+test("copy: a change shows up in the copied context only while the highlight is on", () => {
+  const { sv } = load();
+  sv.selectUseCase("list-orders");
+  const L = uc("list-orders");
+  const changed = demoAutoChanges().steps.find((c) => c.useCase === "list-orders");
+  assert.ok(changed);
+  const k = L.steps.findIndex((s) => s.id === changed.step);
+  assert.match(sv.copyOf({ t: "step", u: "list-orders", i: k }).context, /변경: /);
+  sv.setOverlay(false);
+  assert.ok(!/변경: /.test(sv.copyOf({ t: "step", u: "list-orders", i: k }).context));
 });
