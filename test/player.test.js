@@ -363,7 +363,7 @@ test("motion: the packet starts at the route start, eases in, moves forward only
   const i = uc("list-orders").steps.findIndex((s) => s.id === "request");
   sv.go(i, true);
   const p0 = sv.packet(), box = sv.scene().boxes.browser;
-  assert.ok(Math.abs(p0.x - (box.x + box.w / 2 + 3)) < 2, "first frame sits on the browser's edge, before any frame ran");
+  assert.ok(Math.abs(p0.x - (box.x + box.w / 2)) < 2, "first frame sits on the browser's edge, before any frame ran");
   const xs = [p0.x];
   clock.advance(4000, () => { const p = sv.packet(); if (p && sv.state.leg === 0 && !sv.state.finished) xs.push(p.x); });
   for (let k = 1; k < xs.length; k++) assert.ok(xs[k] >= xs[k - 1] - 1e-6, "never moves backwards");
@@ -469,4 +469,146 @@ test("the top bar shows the model's depth as a chip, in both languages; no depth
   const none = load({ model: tiny(), changes: null }).byId["sv-depth"];
   assert.equal(none.hidden, true);
   assert.equal(none.textContent, "");
+});
+
+/* ───────── 0.3.3: nothing changed, long labels, progress bar, phones ───────── */
+const unchanged = (base = "abcdef1234567", head = "abcdef1234567") => ({ title: "no change", summary: "Nothing changed in this range.", ref: "x", components: [], steps: [], details: [], unmapped: [], ignored: [], generated: { by: "nacholens diff", base, head, modelCommit: head, lineTranslation: false } });
+
+test("nothing changed: the range says so, the highlight switch is off, every flow is listed open (not hidden in a fold)", () => {
+  const { byId } = load({ changes: unchanged(), lang: "en" });
+  assert.equal(byId["sv-ref"].textContent, "abcdef1 · No changes");
+  assert.equal(byId["sv-overlay"].getAttribute("disabled"), "");
+  const groups = byId["sv-list"].all(has("gh"));
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0].getAttribute("aria-expanded"), "true");
+  assert.equal(byId["sv-list"].all(has("uc")).length, demoModel().useCases.length);
+  const ko = load({ changes: unchanged() }).byId["sv-ref"].textContent;
+  assert.equal(ko, "abcdef1 · 변경 없음");
+});
+
+test("a real range keeps its arrow and the highlight switch stays usable", () => {
+  const { byId } = load({ lang: "en" });
+  assert.match(byId["sv-ref"].textContent, / → /);
+  assert.equal(byId["sv-overlay"].getAttribute("disabled"), null);
+});
+
+test("nothing changed: the review dock is folded and says there is nothing to re-test instead of 0/0/0", () => {
+  const model = demoModel(), changes = unchanged();
+  const review = buildReview(model, changes, {});
+  const { rv, byId } = load({ model, changes, review, lang: "en" });
+  assert.equal(rv.state.collapsed, true);
+  rv.open("impact");
+  const text = byId["sv-review"].textContent;
+  assert.doesNotMatch(text, /Direct 0 · Indirect 0/);
+  assert.match(text, /No changed steps/);
+});
+
+test("a flow that is selected stays visible even when its group is folded; search also finds step names", () => {
+  const { sv, byId } = load();
+  const same = demoModel().useCases.map((u) => u.id).find((id) => !byId["sv-list"].all(has("uc")).some((b) => b.getAttribute("data-uc") === id));
+  sv.selectUseCase(same);
+  assert.ok(byId["sv-list"].all(has("uc")).some((b) => b.getAttribute("data-uc") === same), "current flow is listed");
+  const label = demoModel().useCases.find((u) => u.id === same).steps[1].label;
+  byId["sv-q"].fire("input", { target: { value: label.toLowerCase() } });
+  assert.ok(byId["sv-list"].all(has("uc")).some((b) => b.getAttribute("data-uc") === same), "found by a step name");
+});
+
+test("long names are never silently cut: the label, the route and the caption carry the full text as a tooltip", () => {
+  const { sv, byId } = load();
+  sv.selectUseCase("list-orders");
+  const lbl = byId["sv-list"].all(has("lbl"))[0];
+  assert.ok(lbl.getAttribute("title") && lbl.getAttribute("title") === lbl.textContent);
+  const m = byId["sv-list"].all(has("m"))[0];
+  assert.equal(m.getAttribute("title"), m.textContent);
+  sv.go(0, true);
+  const txt = byId["sv-caption"].find(has("txt"));
+  assert.equal(txt.getAttribute("title"), txt.textContent);
+});
+
+test("progress bar: a mark on changed steps, the current step is marked, each segment names its step", () => {
+  const { sv, byId } = load();
+  sv.selectUseCase("list-orders");
+  sv.go(1, false);
+  const segs = byId["sv-transport"].find(has("scrub")).children;
+  const u = demoModel().useCases.find((x) => x.id === "list-orders");
+  assert.equal(segs.length, u.steps.length);
+  const chg = demoAutoChanges().steps.filter((c) => c.useCase === "list-orders").map((c) => c.step);
+  u.steps.forEach((st, i) => {
+    assert.equal(segs[i].classList.contains("chg"), chg.includes(st.id), "changed mark on " + st.id);
+    assert.equal(segs[i].classList.contains("cur"), i === 1, "current mark on " + st.id);
+    assert.ok(segs[i].getAttribute("title").startsWith((i + 1) + ". " + st.label));
+  });
+  assert.equal(segs[1].getAttribute("aria-current"), "step");
+});
+
+test("phones: below 700px the top bar and the transport wrap instead of widening the page", () => {
+  const html = buildPage(demoModel(), demoAutoChanges(), { target: "html", lang: "en" });
+  const css = html.match(/@media \(max-width: 700px\) \{[^]*?\n\}/)?.[0] ?? "";
+  assert.match(css, /\.transport \{[^}]*flex-wrap: wrap/);
+  assert.match(css, /\.topbar [^{]*\{[^}]*min-width: 0/);
+  assert.match(css, /\.scrub \{[^}]*flex-basis: 100%/);
+});
+
+/* ───────── wires: routed around boxes, never under them ───────── */
+const geom = (byId) => {
+  const boxes = byId["sv-canvas"].all((e) => e.attrs["data-id"] && e.find((c) => c.tagName === "rect")).map((g) => { const r = g.find((c) => c.tagName === "rect"); return { id: g.attrs["data-id"], x0: +r.attrs.x, y0: +r.attrs.y, x1: +r.attrs.x + +r.attrs.width, y1: +r.attrs.y + +r.attrs.height }; });
+  const wires = byId["sv-canvas"].all((e) => e.tagName === "path" && /(^| )(lk|wr)( |$)/.test(e.attrs.class ?? "")).map((p) => p.attrs.d.split(/(?=[ML])/).map((s) => s.slice(1).trim().split(/\s+/).map(Number)).map(([x, y]) => ({ x, y })));
+  return { boxes, wires };
+};
+const hitsBox = (a, b, q, pad = 1) => { // does the segment a-b cut through the inside of box q (shrunk by pad)?
+  let t0 = 0, t1 = 1; const dx = b.x - a.x, dy = b.y - a.y;
+  for (const [p, d] of [[-dx, a.x - (q.x0 + pad)], [dx, q.x1 - pad - a.x], [-dy, a.y - (q.y0 + pad)], [dy, q.y1 - pad - a.y]]) {
+    if (p === 0) { if (d < 0) return false; } else { const r = d / p; if (p < 0) { if (r > t1) return false; t0 = Math.max(t0, r); } else { if (r < t0) return false; t1 = Math.min(t1, r); } }
+  }
+  return t1 - t0 > 0.02;
+};
+const near = (p, q) => p.x >= q.x0 - 6 && p.x <= q.x1 + 6 && p.y >= q.y0 - 6 && p.y <= q.y1 + 6;
+function crowded(byId) { // [wires that run through a box they do not start or end at, wires lying on top of each other]
+  const { boxes, wires } = geom(byId); let through = 0, stacked = 0;
+  wires.forEach((w, i) => {
+    const ends = boxes.filter((q) => near(w[0], q) || near(w[w.length - 1], q));
+    for (const q of boxes) {
+      if (ends.includes(q)) continue;
+      if (w.some((p, k) => k && hitsBox(w[k - 1], p, q))) { through++; break; }
+    }
+    wires.slice(i + 1).forEach((v) => {
+      let shared = 0;
+      for (let k = 1; k < w.length; k++) for (let m = 1; m < v.length; m++) {
+        const a = w[k - 1], b = w[k], c = v[m - 1], d = v[m];
+        if (a.x === b.x && c.x === d.x && Math.abs(a.x - c.x) < 3) shared += Math.max(0, Math.min(Math.max(a.y, b.y), Math.max(c.y, d.y)) - Math.max(Math.min(a.y, b.y), Math.min(c.y, d.y)));
+        if (a.y === b.y && c.y === d.y && Math.abs(a.y - c.y) < 3) shared += Math.max(0, Math.min(Math.max(a.x, b.x), Math.max(c.x, d.x)) - Math.max(Math.min(a.x, b.x), Math.min(c.x, d.x)));
+      }
+      if (shared > 12) stacked++;
+    });
+  });
+  return [through, stacked];
+}
+
+test("wires: every flow, in the architecture and inside every component, runs between boxes - never through or under one, never on top of another wire", () => {
+  for (const stage of [[1440, 760], [1000, 600]]) {
+    const { sv, byId } = load({ stage });
+    for (const u of demoModel().useCases) {
+      sv.selectUseCase(u.id);
+      assert.deepEqual(crowded(byId), [0, 0], `${u.id} architecture ${stage}`);
+      for (const c of demoModel().components.filter((x) => x.parts || x.tables || x.endpoints)) {
+        sv.openDetail(c.id);
+        assert.deepEqual(crowded(byId), [0, 0], `${u.id} inside ${c.id} ${stage}`);
+        sv.closeDetail();
+      }
+    }
+  }
+});
+
+test("wires: drawn as orthogonal runs with rounded corners, and the travelling packet follows exactly the drawn wire", () => {
+  const { sv, byId, clock } = load({ reduce: false });
+  sv.selectUseCase("list-orders");
+  const { wires } = geom(byId);
+  assert.ok(wires.length > 0);
+  wires.forEach((w) => w.forEach((p, k) => { if (!k) return; const dx = Math.abs(p.x - w[k - 1].x), dy = Math.abs(p.y - w[k - 1].y); assert.ok(dx < 0.01 || dy < 0.01 || Math.max(dx, dy) <= 10, "straight run or inside a corner: " + JSON.stringify([w[k - 1], p])); }));
+  const i = uc("list-orders").steps.findIndex((x) => x.id === "session");
+  sv.go(i, true); clock.advance(60);
+  const run = layer(byId, "flow").find((e) => e.tagName === "path");
+  assert.ok(run, "a leg is travelling");
+  const norm = (d) => d.split(/(?=[ML])/).map((q) => q.slice(1).trim()).sort().join("|");
+  assert.ok(byId["sv-canvas"].all((e) => e.tagName === "path" && /(^| )lk( |$)/.test(e.attrs.class ?? "")).some((e) => norm(e.attrs.d) === norm(run.attrs.d)), "the packet runs on a drawn wire");
 });

@@ -1,0 +1,22 @@
+{
+  "name": "nacholens",
+  "version": "0.3.4",
+  "description": "See what an AI changed in a backend without reading code: use-case flow animation with a change overlay derived from git diff. Zero dependencies.",
+  "author": {
+    "name": "Mafianacho Inc."
+  },
+  "homepage": "https://github.com/mafianacho/nacholens#readme",
+  "repository": "https://github.com/mafianacho/nacholens",
+  "license": "Apache-2.0",
+  "keywords": ["architecture", "visualization", "code-review", "ai", "agent-skill", "git-diff", "backend"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "nacholens",
+    "shortDescription": "See what an AI changed in a backend, without reading code",
+    "longDescription": "Builds a single-page use-case flow animation of a backend repository and highlights what changed, derived from git diff. Every claim is backed by file:line evidence checked against the real source. Zero dependencies.",
+    "developerName": "Mafianacho Inc.",
+    "category": "Coding",
+    "capabilities": ["Read"],
+    "websiteURL": "https://github.com/mafianacho/nacholens"
+  }
+}

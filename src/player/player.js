@@ -70,7 +70,7 @@
     out: "밖", outText: function (inPath, focus) { return inPath ? "이 단계의 " + focus + " 내부 경로는 모델에 없습니다" : "이 단계는 " + focus + " 밖에서 일어납니다"; },
     work: "내부 처리", workText: function (x) { return x + " 안에서 처리"; },
     first: "처음으로", prev: "이전 단계", next: "다음 단계", play: "재생", pause: "일시정지", replay: "다시 재생", toStep: function (n) { return n + "단계로"; }, speed: "재생 속도",
-    reviewed: "이 단계 리뷰함", gChanged: "이번에 바뀐 흐름", gSame: "바뀌지 않은 흐름", gAll: "흐름", reviewedTitle: "바뀐 단계 중 리뷰한 수", reviewBadge: function (a, b) { return "리뷰 " + a + "/" + b; },
+    noChanges: "변경 없음", reviewed: "이 단계 리뷰함", gChanged: "이번에 바뀐 흐름", gSame: "바뀌지 않은 흐름", gAll: "흐름", reviewedTitle: "바뀐 단계 중 리뷰한 수", reviewBadge: function (a, b) { return "리뷰 " + a + "/" + b; },
     noMatch: "맞는 흐름이 없습니다", overview: "흐름 개요", gone: "이번에 없어진 단계", howTo: "애니메이션 읽는 법", inStep: function (n) { return n + "단계에서 일어나는 일"; },
     field: { label: "단계 이름", kind: "종류", route: "경로", request: "요청", response: "응답" }, before: "변경 전", moved: "내용은 같고 단계 순서만 바뀌었습니다.",
     transforms: "데이터 모양이 바뀌는 곳", sent: "보내는 데이터", received: "받는 데이터", evidence: "근거 코드", changed: "바뀜", table: "테이블", endpoint: "엔드포인트",
@@ -97,7 +97,7 @@
     out: "Outside", outText: function (inPath, focus) { return inPath ? "The model has no path inside " + focus + " for this step" : "This step happens outside " + focus; },
     work: "Working", workText: function (x) { return "Working inside " + x; },
     first: "Back to the start", prev: "Previous step", next: "Next step", play: "Play", pause: "Pause", replay: "Replay", toStep: function (n) { return "Go to step " + n; }, speed: "Playback speed",
-    reviewed: "I reviewed this step", gChanged: "Changed in this work", gSame: "Not changed", gAll: "Flows", reviewedTitle: "Changed steps reviewed", reviewBadge: function (a, b) { return "Reviewed " + a + "/" + b; },
+    noChanges: "No changes", reviewed: "I reviewed this step", gChanged: "Changed in this work", gSame: "Not changed", gAll: "Flows", reviewedTitle: "Changed steps reviewed", reviewBadge: function (a, b) { return "Reviewed " + a + "/" + b; },
     noMatch: "No matching flow", overview: "Flow overview", gone: "Steps removed in this work", howTo: "How to read the animation", inStep: function (n) { return "What happens in step " + n; },
     field: { label: "Step name", kind: "Kind", route: "Route", request: "Request", response: "Response" }, before: "Before", moved: "Same content; only the step order changed.",
     transforms: "Where the data changes shape", sent: "Data sent", received: "Data received", evidence: "Evidence", changed: "Changed", table: "Table", endpoint: "Endpoint",
@@ -130,6 +130,7 @@
   function pathOf(st) { return [st.from].concat(st.via || [], [st.to]); }
   function chgOf(u, st) { return (S.overlay && stepChg[u.id + "/" + st.id]) || null; }
   function changedSteps(u) { return u.steps.filter(function (st) { return stepChg[u.id + "/" + st.id]; }); }
+  function anyChange() { return !!changes && (model.useCases.some(function (u) { return changedSteps(u).length; }) || (changes.components || []).length > 0); }
   function hasDetail(c) { return !!(c && ((c.parts && c.parts.length) || (c.tables && c.tables.length) || (c.endpoints && c.endpoints.length))); }
   function compTag(id) { // marked only when changed AND on a changed step of the selected flow
     var c = compChg[id]; if (!c || !S.overlay) return null;
@@ -161,7 +162,7 @@
     SC.hidden = model.components.length - shown.length;
     var lanes = {}; shown.forEach(function (c) { var l = c.lane != null ? c.lane : LANE[c.kind]; (lanes[l] = lanes[l] || []).push(c); });
     var keys = Object.keys(lanes).map(Number).sort(function (a, b) { return a - b; });
-    G.NW = Math.round(Math.max(140, Math.min(200, (G.W - 60) / keys.length - 28)));
+    G.NW = Math.round(Math.max(140, Math.min(200, (G.W - 60) / keys.length - 44)));
     var mx = G.NW / 2 + 32, span = keys.length > 1 ? (G.W - 2 * mx) / (keys.length - 1) : 0, top = 76, bottom = 28;
     keys.forEach(function (k, li) {
       var list = lanes[k], rows = {}, used2 = {}, next = 0;
@@ -196,7 +197,7 @@
     }
     stubs(left, pad + stubW / 2, W.callers);
     stubs(right, G.W - pad - stubW / 2, W.callees);
-    var inL = left.length ? pad + stubW + 28 : pad, inR = right.length ? G.W - pad - stubW - 28 : G.W - pad;
+    var inL = left.length ? pad + stubW + 44 : pad, inR = right.length ? G.W - pad - stubW - 44 : G.W - pad;
     if (c.parts && c.parts.length) {
       var byId = {}; c.parts.forEach(function (p) { byId[p.id] = p; });
       var order = []; u.steps.forEach(function (st) { traceIn(st, c.id).forEach(function (id) { if (order.indexOf(id) < 0 && byId[id.slice(2)]) order.push(id); }); });
@@ -205,7 +206,7 @@
       var cols = [[W.colEntry, ["route", "handler", "middleware"]], [W.colWork, ["service", "module", "job", "port"]], [W.colAdapter, ["adapter"]]]
         .map(function (g) { return { name: g[0], items: list.filter(function (p) { return g[1].indexOf(p.role) >= 0; }) }; })
         .filter(function (g) { return g.items.length; });
-      var colW = (inR - inL) / cols.length, cw = Math.max(124, Math.min(200, colW - 30)), ch = 58;
+      var colW = (inR - inL) / cols.length, cw = Math.max(124, Math.min(190, colW - 64)), ch = 58;
       cols.forEach(function (col, ci) {
         var x = inL + colW * (ci + 0.5), n = col.items.length, gap = n > 1 ? Math.min(86, Math.max(ch + 12, (G.H - top - bottom - ch) / (n - 1))) : 0; // room for a transform chip when there is space
         SC.heads.push({ x: x, text: col.name });
@@ -248,12 +249,182 @@
     if (SC.mode === "detail" && Math.abs(A0.x - B0.x) < 1 && Math.abs(A0.y - B0.y) > 1.7 * A0.h) return { x: A0.x + A0.w / 2 + 48, y: (A0.y + B0.y) / 2 }; // same column, not adjacent: go around
     return null;
   }
-  function hopPts(a, b) {
+  function hopStraight(a, b) {
     var A0 = SC.pos[a], B0 = SC.pos[b], c = bend(a, b);
     if (!c) return [edge(a, B0.x, B0.y), edge(b, A0.x, A0.y)];
     var q0 = edge(a, c.x, c.y), q1 = edge(b, c.x, c.y), out = [];
     for (var i = 0; i <= 20; i++) { var t = i / 20, v = 1 - t; out.push({ x: v * v * q0.x + 2 * v * t * c.x + t * t * q1.x, y: v * v * q0.y + 2 * v * t * c.y + t * t * q1.y }); }
     return out;
+  }
+
+  /* Edge routing. Every wire is an orthogonal path from the side of one box to the side of another that runs only through
+     the free channels between boxes (never under a box), keeps clear of every other box by `m` px, and is spread over its own
+     line where several wires share a channel or a side. It is the same polyline for the drawn wire and for the travelling
+     packet. Found on the lines through the box edges (Dijkstra, a penalty per bend and per stretch shared with a wire placed
+     before); if no free path exists at any clearance the old straight/curved hop is used. */
+  var ROUTE = {};
+  var CLEAR = [10, 6, 3], BEND = 24, CROSS = 20, ROUND = 9;
+  function keyPair(a, b) { return a + "\u0001" + b; }
+  function rectOf(id) { var p = SC.pos[id]; return { x0: p.x - p.w / 2, x1: p.x + p.w / 2, y0: p.y - p.h / 2, y1: p.y + p.h / 2 }; }
+  function sideFor(a, b, ids) { // [side of a, side of b]: R, L, T, B
+    var A0 = rectOf(a), B0 = rectOf(b);
+    if (B0.x0 >= A0.x1 + 6) return ["R", "L"];
+    if (A0.x0 >= B0.x1 + 6) return ["L", "R"];
+    var top = A0.y1 <= B0.y0, lo = top ? A0.y1 : B0.y1, hi = top ? B0.y0 : A0.y0, x0 = Math.max(A0.x0, B0.x0), x1 = Math.min(A0.x1, B0.x1), clear = x1 - x0 > 8;
+    ids.forEach(function (o) { if (o === a || o === b) return; var Q = rectOf(o); if (Q.y1 > lo && Q.y0 < hi && Q.x1 > x0 && Q.x0 < x1) clear = false; });
+    if (clear && (A0.y1 <= B0.y0 || B0.y1 <= A0.y0)) return top ? ["B", "T"] : ["T", "B"];
+    return ["R", "R"]; // same column with a box in between: around the right side
+  }
+  function outDir(side) { return side === "R" ? [1, 0] : side === "L" ? [-1, 0] : side === "T" ? [0, -1] : [0, 1]; }
+  function portAt(id, side, k, n) { // the k-th of n ports on a side, spread over the middle of it
+    var B0 = rectOf(id), horiz = side === "L" || side === "R", len = horiz ? B0.y1 - B0.y0 : B0.x1 - B0.x0, gap = n > 1 ? Math.min(13, (len - 18) / (n - 1)) : 0, off = (k - (n - 1) / 2) * gap;
+    if (side === "R") return { x: B0.x1, y: (B0.y0 + B0.y1) / 2 + off };
+    if (side === "L") return { x: B0.x0, y: (B0.y0 + B0.y1) / 2 + off };
+    if (side === "T") return { x: (B0.x0 + B0.x1) / 2 + off, y: B0.y0 };
+    return { x: (B0.x0 + B0.x1) / 2 + off, y: B0.y1 };
+  }
+  function uniq(list) { var o = list.slice().sort(function (a, b) { return a - b; }), r = []; o.forEach(function (v) { v = Math.round(v * 100) / 100; if (!r.length || v - r[r.length - 1] > 0.5) r.push(v); }); return r; }
+  function fillChannels(base, lo, hi) { // lines through every free gap, 8 px apart, so wires sharing a channel do not overlap (none closer than 4 px to another line)
+    var s0 = uniq(base), out = s0.slice();
+    function free(v) { for (var j = 0; j < out.length; j++) if (Math.abs(out[j] - v) < 4) return false; return true; }
+    for (var i = 1; i < s0.length; i++) {
+      var a = s0[i - 1], b = s0[i], w = b - a; if (w < 11) continue;
+      var mid = (a + b) / 2; if (free(mid)) out.push(mid);
+      for (var k = 1; k <= 3; k++) { if (mid - 8 * k > a + 3 && free(mid - 8 * k)) out.push(mid - 8 * k); if (mid + 8 * k < b - 3 && free(mid + 8 * k)) out.push(mid + 8 * k); }
+    }
+    return uniq(out.filter(function (v) { return v >= lo && v <= hi; }));
+  }
+  function overlapLen(map, key, a0, a1) { var l = map[key], t = 0; if (!l) return 0; for (var i = 0; i < l.length; i++) t += Math.max(0, Math.min(a1, l[i][1]) - Math.max(a0, l[i][0])); return t; }
+  function crossings(map, a0, a1, c) { // placed wires running the other way that this stretch (from a0 to a1 at line c) cuts across
+    var n = 0; Object.keys(map).forEach(function (k) { var v = +k; if (v <= a0 + 0.5 || v >= a1 - 0.5) return; map[k].forEach(function (r) { if (c > r[0] + 0.5 && c < r[1] - 0.5) n++; }); }); return n;
+  }
+  function sharedCost(U, horiz, c, a0, a1) { // cost of running along line c from a0 to a1: on top of a placed wire is worst, within 7 px of one is bad
+    var map = horiz ? U.h : U.v, other = horiz ? U.v : U.h, cost = 0, k = Math.round(c), ov = overlapLen(map, k, a0, a1);
+    if (ov > 0) cost += ov * 4 + 40;
+    for (var d = 1; d <= 6; d++) { var near = overlapLen(map, k - d, a0, a1) + overlapLen(map, k + d, a0, a1); if (near > 0) cost += d <= 3 ? near * 2.5 + 20 : near * 0.3 + 3; }
+    return cost + crossings(other, a0, a1, c) * CROSS;
+  }
+  function addUsed(U, pts) {
+    for (var i = 1; i < pts.length; i++) {
+      var p = pts[i - 1], q = pts[i];
+      if (Math.abs(p.y - q.y) < 0.01) (U.h[Math.round(p.y)] = U.h[Math.round(p.y)] || []).push([Math.min(p.x, q.x), Math.max(p.x, q.x)]);
+      else if (Math.abs(p.x - q.x) < 0.01) (U.v[Math.round(p.x)] = U.v[Math.round(p.x)] || []).push([Math.min(p.y, q.y), Math.max(p.y, q.y)]);
+    }
+  }
+  function makeGrid(boxes, ports, m, bounds) { // the lines through the box edges (kept m px clear of every box), the lane lines of each free gap and the port stubs
+    var infl = boxes.map(function (b) { return { x0: b.x0 - m, x1: b.x1 + m, y0: b.y0 - m, y1: b.y1 + m }; }), EPS = 0.01;
+    function inside(x, y) { for (var i = 0; i < infl.length; i++) { var q = infl[i]; if (x > q.x0 + EPS && x < q.x1 - EPS && y > q.y0 + EPS && y < q.y1 - EPS) return true; } return false; }
+    var bx = [bounds.x0, bounds.x1], by = [bounds.y0, bounds.y1];
+    infl.forEach(function (q) { bx.push(q.x0, q.x1); by.push(q.y0, q.y1); });
+    var sx = [], sy = []; ports.forEach(function (p) { sx.push(p.x + p.dx * m); sy.push(p.y + p.dy * m); });
+    var xs = uniq(fillChannels(bx, bounds.x0, bounds.x1).concat(sx)), ys = uniq(fillChannels(by, bounds.y0, bounds.y1).concat(sy)), NX = xs.length, NY = ys.length, N = NX * NY;
+    var blocked = new Uint8Array(N), hBlock = new Uint8Array(N), vBlock = new Uint8Array(N);
+    for (var iy = 0; iy < NY; iy++) for (var ix = 0; ix < NX; ix++) {
+      var n = iy * NX + ix; blocked[n] = inside(xs[ix], ys[iy]) ? 1 : 0;
+      if (ix + 1 < NX && inside((xs[ix] + xs[ix + 1]) / 2, ys[iy])) hBlock[n] = 1;
+      if (iy + 1 < NY && inside(xs[ix], (ys[iy] + ys[iy + 1]) / 2)) vBlock[n] = 1;
+    }
+    return { m: m, xs: xs, ys: ys, NX: NX, NY: NY, blocked: blocked, hBlock: hBlock, vBlock: vBlock, inside: inside };
+  }
+  function nearestIdx(list, v) { var best = 0, bd = 1e9; for (var i = 0; i < list.length; i++) { var d = Math.abs(list[i] - v); if (d < bd) { bd = d; best = i; } } return best; }
+  function findPath(G2, S0, S1, d0, d1, U) { // A* over the grid, a penalty per bend, per stretch on or beside a placed wire and per crossing of one
+    var xs = G2.xs, ys = G2.ys, NX = G2.NX, NY = G2.NY, N = NX * NY;
+    if (G2.inside(S0.x, S0.y) || G2.inside(S1.x, S1.y)) return null;
+    var s = nearestIdx(ys, S0.y) * NX + nearestIdx(xs, S0.x), g = nearestIdx(ys, S1.y) * NX + nearestIdx(xs, S1.x);
+    var gx = xs[g % NX], gy = ys[(g - g % NX) / NX];
+    var dist = new Float64Array(N * 4).fill(1e12), prev = new Int32Array(N * 4).fill(-1), costH = new Float64Array(N).fill(-1), costV = new Float64Array(N).fill(-1);
+    var DX = [1, 0, -1, 0], DY = [0, 1, 0, -1], heap = [];
+    function push(c, st) { heap.push([c, st]); var i = heap.length - 1; while (i > 0) { var pa = (i - 1) >> 1; if (heap[pa][0] <= heap[i][0]) break; var t = heap[pa]; heap[pa] = heap[i]; heap[i] = t; i = pa; } }
+    function pop() { var top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; var i = 0; for (;;) { var l = 2 * i + 1, r = l + 1, m2 = i; if (l < heap.length && heap[l][0] < heap[m2][0]) m2 = l; if (r < heap.length && heap[r][0] < heap[m2][0]) m2 = r; if (m2 === i) break; var t = heap[m2]; heap[m2] = heap[i]; heap[i] = t; i = m2; } } return top; }
+    var startDir = d0[0] === 1 ? 0 : d0[1] === 1 ? 1 : d0[0] === -1 ? 2 : 3, inDir = [-d1[0], -d1[1]], want = inDir[0] === 1 ? 0 : inDir[1] === 1 ? 1 : inDir[0] === -1 ? 2 : 3;
+    dist[s * 4 + startDir] = 0; push(Math.abs(gx - xs[s % NX]) + Math.abs(gy - ys[(s - s % NX) / NX]), s * 4 + startDir);
+    var done = -1, bestTotal = 1e12;
+    while (heap.length) {
+      var cur = pop(), st = cur[1], n = st >> 2, d = st & 3, gc = dist[st];
+      if (cur[0] - 1e-9 > bestTotal) break; // nothing left that can beat the best way in
+      var nx = n % NX, ny = (n - nx) / NX;
+      if (n === g) { var tot = gc + (d !== want ? BEND : 0); if (tot < bestTotal) { bestTotal = tot; done = st; } continue; }
+      for (var e = 0; e < 4; e++) {
+        if (e === ((d + 2) & 3)) continue;
+        var mx = nx + DX[e], my = ny + DY[e]; if (mx < 0 || my < 0 || mx >= NX || my >= NY) continue;
+        var m1 = my * NX + mx; if (G2.blocked[m1]) continue;
+        var horiz = e % 2 === 0, eid = e === 0 ? n : e === 2 ? m1 : e === 1 ? n : m1;
+        if (horiz ? G2.hBlock[eid] : G2.vBlock[eid]) continue;
+        var ax = xs[nx], ay = ys[ny], bx2 = xs[mx], by2 = ys[my], cache = horiz ? costH : costV, extra = cache[eid];
+        if (extra < 0) { extra = horiz ? sharedCost(U, true, ay, Math.min(ax, bx2), Math.max(ax, bx2)) : sharedCost(U, false, ax, Math.min(ay, by2), Math.max(ay, by2)); cache[eid] = extra; }
+        var len = Math.abs(bx2 - ax) + Math.abs(by2 - ay), c = gc + len + (e !== d ? BEND : 0) + extra, st2 = m1 * 4 + e;
+        if (c < dist[st2] - 1e-9) { dist[st2] = c; prev[st2] = st; push(c + Math.abs(gx - bx2) + Math.abs(gy - by2), st2); }
+      }
+    }
+    if (done < 0) return null;
+    var out = []; for (var cs = done; cs >= 0; cs = prev[cs]) { var nn = cs >> 2; out.push({ x: xs[nn % NX], y: ys[(nn - nn % NX) / NX] }); }
+    return out.reverse();
+  }
+  function tidy(pts) { // drop repeated and collinear points
+    var o = [];
+    pts.forEach(function (p) {
+      if (o.length && Math.abs(o[o.length - 1].x - p.x) < 0.01 && Math.abs(o[o.length - 1].y - p.y) < 0.01) return;
+      if (o.length > 1) { var a = o[o.length - 2], b = o[o.length - 1]; if ((Math.abs(a.x - b.x) < 0.01 && Math.abs(b.x - p.x) < 0.01) || (Math.abs(a.y - b.y) < 0.01 && Math.abs(b.y - p.y) < 0.01)) o.pop(); }
+      o.push(p);
+    });
+    return o;
+  }
+  function rounded(pts) { // soften the right-angle corners
+    if (pts.length < 3) return pts;
+    var o = [pts[0]];
+    for (var i = 1; i < pts.length - 1; i++) {
+      var a = pts[i - 1], b = pts[i], c = pts[i + 1], l1 = Math.hypot(b.x - a.x, b.y - a.y), l2 = Math.hypot(c.x - b.x, c.y - b.y), r = Math.min(ROUND, l1 / 2, l2 / 2);
+      if (r < 5) { o.push(b); continue; } // a jog too short for a round corner stays square
+      var p0 = { x: b.x + (a.x - b.x) / l1 * r, y: b.y + (a.y - b.y) / l1 * r }, p1 = { x: b.x + (c.x - b.x) / l2 * r, y: b.y + (c.y - b.y) / l2 * r };
+      for (var k = 0; k <= 4; k++) { var t = k / 4, v = 1 - t; o.push({ x: v * v * p0.x + 2 * v * t * b.x + t * t * p1.x, y: v * v * p0.y + 2 * v * t * b.y + t * t * p1.y }); }
+    }
+    o.push(pts[pts.length - 1]); return o;
+  }
+  function wiresOf() { // every pair of boxes a wire or a step crosses in the current scene
+    var pairs = [], seen = {};
+    function add(a, b) { if (!a || !b || a === b || !SC.pos[a] || !SC.pos[b]) return; var k = keyOf(a, b); if (seen[k]) return; seen[k] = 1; pairs.push([a, b]); }
+    if (SC.mode === "arch") model.links.forEach(function (l) { add(l.a, l.b); });
+    else (comp[SC.focus].wires || []).forEach(function (w) { add("p:" + w.from, "p:" + w.to); });
+    uc().steps.forEach(function (st) { legsOf(st).forEach(function (lg) { if (lg.type === "move") lg.ids.slice(1).forEach(function (b, i) { add(lg.ids[i], b); }); }); });
+    return pairs;
+  }
+  function planRoutes() {
+    ROUTE = {};
+    var ids = Object.keys(SC.pos), pairs = wiresOf(), boxes = ids.map(rectOf), sides = {}, ends = {};
+    pairs.forEach(function (pr, i) {
+      var sd = sideFor(pr[0], pr[1], ids); sides[i] = sd;
+      [[0, pr[0], pr[1]], [1, pr[1], pr[0]]].forEach(function (e) { var k = e[1] + "|" + sd[e[0]]; (ends[k] = ends[k] || []).push({ i: i, end: e[0], other: SC.pos[e[2]] }); });
+    });
+    var port = {}; // "pair index/end" -> point, wires on one side ordered by where they lead so they do not cross at the box
+    Object.keys(ends).forEach(function (k) {
+      var side = k.split("|")[1], horiz = side === "L" || side === "R", list = ends[k];
+      list.sort(function (a, b) { return (horiz ? a.other.y - b.other.y : a.other.x - b.other.x) || a.i - b.i; });
+      list.forEach(function (e, n) { port[e.i + "/" + e.end] = portAt(k.split("|")[0], side, n, list.length); });
+    });
+    var minY = 1e9, maxY = 0, minX = 1e9, maxX = 0; boxes.forEach(function (b) { minY = Math.min(minY, b.y0); maxY = Math.max(maxY, b.y1); minX = Math.min(minX, b.x0); maxX = Math.max(maxX, b.x1); });
+    var bounds = { x0: Math.min(4, minX - 12), x1: Math.max(G.W - 4, maxX + 12), y0: Math.min(minY - 14, SC.mode === "detail" ? 92 : 50), y1: Math.max(G.H - 8, maxY + 14) };
+    var U = { h: {}, v: {} }, order = pairs.map(function (pr, i) { return i; });
+    order.sort(function (a, b) { var A0 = SC.pos[pairs[a][0]], A1 = SC.pos[pairs[a][1]], B0 = SC.pos[pairs[b][0]], B1 = SC.pos[pairs[b][1]]; return (Math.abs(A0.x - A1.x) + Math.abs(A0.y - A1.y)) - (Math.abs(B0.x - B1.x) + Math.abs(B0.y - B1.y)) || a - b; });
+    var grids = {}, stubs = []; // every wire end, so each clearance level has one grid for the whole scene
+    pairs.forEach(function (pr, i) { [0, 1].forEach(function (end) { var P = port[i + "/" + end], d = outDir(sides[i][end]); stubs.push({ x: P.x, y: P.y, dx: d[0], dy: d[1] }); }); });
+    function gridFor(t) { return grids[t] || (grids[t] = makeGrid(boxes, stubs, CLEAR[t], bounds)); }
+    function routeOne(i, used) {
+      var P0 = port[i + "/0"], P1 = port[i + "/1"], d0 = outDir(sides[i][0]), d1 = outDir(sides[i][1]);
+      for (var t = 0; t < CLEAR.length; t++) {
+        var m = CLEAR[t], S0 = { x: P0.x + d0[0] * m, y: P0.y + d0[1] * m }, S1 = { x: P1.x + d1[0] * m, y: P1.y + d1[1] * m }, mid = findPath(gridFor(t), S0, S1, d0, d1, used);
+        if (mid) return tidy([P0].concat(mid, [P1]));
+      }
+      return null;
+    }
+    order.forEach(function (i) {
+      var r = routeOne(i, U);
+      if (r) { addUsed(U, r); ROUTE[keyPair(pairs[i][0], pairs[i][1])] = { from: pairs[i][0], pts: rounded(r) }; }
+    });
+  }
+  function hopPts(a, b) {
+    var r = ROUTE[keyPair(a, b)] || ROUTE[keyPair(b, a)];
+    if (!r) return hopStraight(a, b);
+    return r.from === a ? r.pts : r.pts.slice().reverse();
   }
   function routePts(ids) { var pts = []; ids.slice(1).forEach(function (b, i) { pts = pts.concat(hopPts(ids[i], b)); }); return pts; }
   function r1(v) { return Math.round(v * 10) / 10; }
@@ -341,7 +512,7 @@
     svg.setAttribute("viewBox", "0 0 " + G.W + " " + G.H);
     ["links", "trail", "flow", "packet", "nodes", "notes", "fx", "rings"].forEach(function (k) { L[k] = s("g", { "class": "layer-" + k }); svg.appendChild(L[k]); });
     NODE = {}; LINK = {};
-    if (SC.mode === "arch") { archLayout(); drawArch(); } else { detailLayout(); drawDetail(); }
+    if (SC.mode === "arch") { archLayout(); planRoutes(); drawArch(); } else { detailLayout(); planRoutes(); drawDetail(); }
     cls($("sv-stage"), "in-detail", SC.mode === "detail");
     var cr = $("sv-crumbs"); clear(cr); cr.hidden = SC.mode !== "detail";
     if (SC.mode === "detail") put(cr, [h("button", { type: "button", "class": "back", on: { click: closeDetail } }, icon("prev"), W.whole), h("span", { "class": "here", text: first(comp[SC.focus].label) }), h("span", { "class": "sub", text: W.inside })]);
@@ -603,7 +774,7 @@
     if (A.step < 0) kids = [h("span", { "class": "leg idle" }, W.idle), h("span", { "class": "txt kr", text: W.idleText(focus, model.components.some(hasDetail)) })];
     else if (!lg) kids = [h("span", { "class": "leg idle" }, W.out), h("span", { "class": "txt kr", text: W.outText(pathOf(u.steps[A.step]).indexOf(SC.focus) >= 0, focus) })];
     else if (lg.type === "work") kids = [h("span", { "class": "leg int" }, W.work), h("span", { "class": "txt kr", text: W.workText(itemName(lg.at)) })];
-    else kids = [h("span", { "class": "leg " + lg.tone }, LEG_KO[lg.tone] + " → " + itemName(lg.ids[lg.ids.length - 1])), h("span", { "class": "txt mono ell", text: lg.text })];
+    else kids = [h("span", { "class": "leg " + lg.tone }, LEG_KO[lg.tone] + " → " + itemName(lg.ids[lg.ids.length - 1])), h("span", { "class": "txt mono ell2", text: lg.text, title: lg.text })];
     if (reduce) { clear(c); put(c, kids); return; }
     cls(c, "swap", true);
     clearTimeout(c.swapTimer);
@@ -663,7 +834,8 @@
     ]);
     var sc = h("div", { "class": "scrub", id: "sv-scrub" });
     u.steps.forEach(function (st, i) {
-      put(sc, h("button", { type: "button", "class": "seg-step" + (i < A.step || (i === A.step && A.finished) ? " done" : ""), title: (i + 1) + ". " + st.label, "aria-label": W.toStep(i + 1), on: { click: function () { A.playing = false; go(i, true); } } }, h("i")));
+      var sg = stepChg[u.id + "/" + st.id];
+      put(sc, h("button", { type: "button", "class": "seg-step" + (i < A.step || (i === A.step && A.finished) ? " done" : "") + (sg ? " chg" : "") + (i === A.step ? " cur" : ""), title: (i + 1) + ". " + st.label + (sg ? " · " + ST[sg.change][1] : ""), "aria-label": W.toStep(i + 1), "aria-current": i === A.step ? "step" : null, on: { click: function () { A.playing = false; go(i, true); } } }, h("i")));
     });
     put(t, [sc, h("span", { "class": "counter", id: "sv-counter" }, (A.step + 1) + " / " + n)]);
     var sp = h("div", { "class": "seg", role: "group", "aria-label": W.speed });
@@ -686,35 +858,38 @@
   function renderSide() {
     var side = $("sv-list"); clear(side);
     var f = S.filter.trim().toLowerCase();
-    var groups = changes ? [["changed", W.gChanged], ["same", W.gSame]] : [["all", W.gAll]];
+    var split = anyChange(), groups = split ? [["changed", W.gChanged], ["same", W.gSame]] : [["all", W.gAll]], curLi = null;
     groups.forEach(function (g) {
       var list = model.useCases.filter(function (u) {
-        var grp = !changes ? "all" : changedSteps(u).length ? "changed" : "same";
-        return grp === g[0] && (!f || (u.title + " " + u.trigger).toLowerCase().indexOf(f) >= 0);
+        var grp = !split ? "all" : changedSteps(u).length ? "changed" : "same";
+        return grp === g[0] && (!f || (u.title + " " + u.trigger + " " + u.steps.map(function (st) { return st.label; }).join(" ")).toLowerCase().indexOf(f) >= 0);
       });
       if (!list.length) return;
-      var open = f || g[0] === "all" ? true : !S.collapsed[g[0]];
+      var open = f || g[0] === "all" || list.some(function (u) { return u.id === S.uc; }) ? true : !S.collapsed[g[0]]; // the flow on screen is never folded away
       put(side, h("button", { type: "button", "class": "gh", "aria-expanded": open ? "true" : "false", on: { click: function () { S.collapsed[g[0]] = open; renderSide(); } } }, icon("chevron"), g[1], h("span", { "class": "n", text: String(list.length) })));
       if (!open) return;
       list.forEach(function (u) {
         var cur = u.id === S.uc, ch = S.overlay ? changedSteps(u) : [], rv = ch.filter(function (st) { return ticks["rv:" + u.id + "/" + st.id]; }).length;
         put(side, h("button", { type: "button", "class": "uc", "data-uc": u.id, "aria-current": cur ? "true" : null, on: { click: function () { if (!cur) selectUc(u.id); } } },
-          h("span", { "class": "main" }, h("span", { "class": "t kr", text: u.title }), h("span", { "class": "m ell", text: u.trigger })),
+          h("span", { "class": "main" }, h("span", { "class": "t kr", text: u.title }), h("span", { "class": "m ell2", text: u.trigger, title: u.trigger })),
           ch.length ? h("span", { "class": "badge", "data-tone": rv === ch.length ? "success" : "warning", title: W.reviewedTitle }, W.reviewBadge(rv, ch.length)) : null));
         if (!cur) return;
         var ol = h("ol", { "class": "steps", id: "sv-steps" });
         u.steps.forEach(function (st, i) {
           var c = chgOf(u, st), pick = function () { A.playing = false; go(i, true); };
-          put(ol, h("li", { "class": "st" + (i < A.step ? " done" : ""), "data-step": st.id, "aria-current": i === A.step ? "step" : null, tabindex: 0,
+          var li = h("li", { "class": "st" + (i < A.step ? " done" : ""), "data-step": st.id, "aria-current": i === A.step ? "step" : null, tabindex: 0,
             on: { click: pick, keydown: function (e) { if (e.key === "Enter") pick(); } } },
-            h("span", { "class": "n" }, String(i + 1)), h("span", { "class": "lbl ell kr", text: st.label }),
+            h("span", { "class": "n" }, String(i + 1)), h("span", { "class": "lbl ell2 kr", text: st.label, title: st.label }),
             c ? h("span", { "class": "chg", "data-tone": ST[c.change][0] }, ST[c.change][1]) : null,
-            c ? tickBox("rv:" + u.id + "/" + st.id) : null));
+            c ? tickBox("rv:" + u.id + "/" + st.id) : null);
+          if (i === A.step) curLi = li;
+          put(ol, li);
         });
         put(side, ol);
       });
     });
     if (!side.firstChild) put(side, h("div", { "class": "empty", text: W.noMatch }));
+    if (curLi && curLi.scrollIntoView) curLi.scrollIntoView({ block: "nearest" }); // the step being played stays in view in a long list
   }
   function selectUc(id, step) {
     if (!ucById[id]) return;
@@ -816,11 +991,12 @@
   function renderTop() {
     $("sv-product").textContent = model.product.name;
     var g = changes && changes.generated, ref = $("sv-ref");
-    ref.hidden = !g; ref.textContent = g && g.base && g.head ? g.base.slice(0, 7) + " → " + g.head.slice(0, 7) : "";
+    ref.hidden = !g; ref.textContent = g && g.base && g.head ? (g.base === g.head ? g.head.slice(0, 7) + " · " + W.noChanges : g.base.slice(0, 7) + " → " + g.head.slice(0, 7)) : "";
     $("sv-commit").textContent = changes ? changes.title : model.product.description;
     var dp = $("sv-depth");
     if (dp) { dp.hidden = !model.depth; dp.textContent = model.depth ? W.depthWord + " " + ({ diff: 1, brief: 2, full: 3 }[model.depth]) + " · " + W.depthName[model.depth] : ""; dp.title = model.depth ? W.depthHint[model.depth] || "" : ""; }
     var t = $("sv-overlay"); t.hidden = !changes; t.setAttribute("aria-checked", S.overlay ? "true" : "false");
+    if (anyChange()) t.removeAttribute("disabled"); else t.setAttribute("disabled", ""); // nothing to highlight: the switch rests
     if (doc.title !== undefined) doc.title = model.product.name + " · Nacholens";
   }
   function syncHash() {

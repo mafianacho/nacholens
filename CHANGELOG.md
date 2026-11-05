@@ -1,12 +1,25 @@
 # Changelog
 
-## 0.3.2
-
-0.3.1 was never published; everything below is in 0.3.2.
+## 0.3.4
 
 - Node: CI runs on Node 20, 22 and 24 (was 20 and 22); the publish workflow uses Node 24. `engines` stays `>=20`, so Node 20 and 22 users are not blocked. Docs say "Node 20+, checked on Node 24".
+- Claude Code and Codex plugin manifests (git-installable marketplace).
 
-### Collection depth
+## 0.3.3
+
+Player usability pass. No model or CLI change.
+
+- **Phones:** below 700px the top bar and the transport wrap and shrink instead of widening the page (the page was 504–611px wide on a 390px screen). The progress bar gets its own row.
+- **Long names:** flow routes, step labels and the caption wrap to two lines and carry the full text as a tooltip, instead of being cut with an ellipsis.
+- **Nothing changed (base = head, or no changed step):** the range reads `abc1234 · No changes` instead of `abc1234 → abc1234`, the highlight switch is disabled, every flow is listed open (no fold called "Not changed"), and the review dock starts folded and says "No changed steps, so nothing needs re-testing" instead of `0 · 0 · 0`.
+- **Progress bar:** taller click targets, a mark on changed steps, the current step is outlined, and the tooltip names the step and its change word. The step being played scrolls into view in the sidebar.
+- **Flow list:** the flow on screen is never folded away; search also matches step names.
+
+## 0.3.2
+
+- Player: **wires are routed around boxes.** A wire was a straight line between box centres, so it could run under a box between its ends, cross another wire or lie on top of one. Now each wire is an orthogonal path with rounded corners from the side of one box to the side of the other: only through free gaps (clear of every other box), separate exit points for wires sharing a side, separate lanes for wires sharing a gap, and the travelling packet follows exactly the drawn wire. No free path: the old straight hop is the fallback. The gaps between the columns inside a component are wider. No model change.
+
+## 0.3.1
 
 **Collection depth: 1 Changes only · 2 Overview · 3 Detailed** (stored as `diff` / `brief` / `full`). Decide how much of a repository a model covers before writing it. People say depth 1 / 2 / 3; depth 1 is not "shallow" but "limited to the change".
 
