@@ -17,7 +17,7 @@ nacholens を使って、このリポジトリについての下の依頼に、�
 深さ（任意）: 1 変更のみ・2 全体像・3 詳細（テーブルや内部まで）。書かなければ依頼に合わせて選び、どれにしたか教えてください。
 
 手順:
-1. nacholens の手順書と CLI を取得する（Node.js 20 以上と git が必要。このリポジトリには何もインストールしない）:
+1. nacholens の手順書と CLI を取得する（Node.js 20 以上（Node 24 で確認済み）と git が必要。このリポジトリには何もインストールしない）:
    npx -y @mafianacho/nacholens@latest install --to "$HOME/.nacholens-skill" --force
 2. "$HOME/.nacholens-skill/nacholens/SKILL.md" を読み、その手順に従う。CLI は次のとおり:
    node "$HOME/.nacholens-skill/nacholens/cli/src/cli.js" <command>

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.4
+
+- Node: CI runs on Node 20, 22 and 24 (was 20 and 22); the publish workflow uses Node 24. `engines` stays `>=20`, so Node 20 and 22 users are not blocked. Docs say "Node 20+, checked on Node 24".
+- Claude Code and Codex plugin manifests (git-installable marketplace).
+
 ## 0.3.3
 
 Player usability pass. No model or CLI change.

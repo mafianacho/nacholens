@@ -58,7 +58,7 @@ const USAGE = `nacholens — AI 가 바꾼 백엔드 변경을 유즈케이스 �
               --lang en|ko     화면 글자 언어 (기본 en; 모델 글자는 쓴 그대로)
               --strict         모델에 없는 변경이 있으면 종료 코드 3
 
-  nacholens --version   설치된 CLI 버전 (수집 수준은 0.3.1 부터)
+  nacholens --version   설치된 CLI 버전 (깊이는 0.3.2 부터)
 
   종료 코드:  0 정상 · 1 모델/근거 문제(고쳐야 함) · 2 사용법/입출력/git 오류 · 3 --strict 에서 모델에 없는 변경 발견
               4 --strict-intent 에서 기획 의도가 미충족
