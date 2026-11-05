@@ -329,7 +329,7 @@ test("0.3.4 everywhere it must be: package.json, CHANGELOG, CLI --version, the i
   assert.equal(run(["--version"], {}, c.log), EXIT.OK);
   assert.equal(c.text(), "0.3.4");
   assert.equal(run(["version"], {}, () => {}), EXIT.OK);
-  assert.match(readFileSync(join(root, ".github/ISSUE_TEMPLATE/bug_report.yml"), "utf8"), /placeholder: "0\.3\.3, /);
+  assert.match(readFileSync(join(root, ".github/ISSUE_TEMPLATE/bug_report.yml"), "utf8"), /placeholder: "0\.3\.4, /);
   // `install` vendors the version and a playbook that explains the depths
   const proj = tmp();
   assert.equal(run(["install", "--agents", "--into", proj], {}, () => {}), EXIT.OK);
@@ -338,7 +338,7 @@ test("0.3.4 everywhere it must be: package.json, CHANGELOG, CLI --version, the i
   const installedCli = join(proj, ".nacholens/cli/src/cli.js");
   assert.equal(execFileSync(process.execPath, [installedCli, "--version"], { encoding: "utf8" }).trim(), "0.3.4");
   const skill = readFileSync(join(proj, ".nacholens/SKILL.md"), "utf8");
-  assert.match(skill, /nacholens ≥ 0\.3\.1/);
+  assert.match(skill, /nacholens ≥ 0\.3\.2/);
   assert.match(skill, /Pick the depth first/);
   // the installed CLI knows --depth: it validates a bundled demo model with a flag
   const out = execFileSync(process.execPath, [installedCli, "validate", join(proj, ".nacholens/cli/models/demo-shop/model.json"), "--depth", "full"], { encoding: "utf8" });
