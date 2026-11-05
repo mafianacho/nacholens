@@ -4,6 +4,12 @@
 
 **English** · [日本語](README.ja.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [中文](README.zh.md) · [한국어](README.ko.md)
 
+**AI agentic coding is a black box. nacholens makes it a white box.**
+
+![Motion graphic. Before: you ask an AI agent for a change and get a wall of diff with three open questions (what did it touch, any new outside calls, what to re-test). After: nacholens shows a request moving through the services with the changed and new parts highlighted, and answers all three.](docs/images/blackbox-to-whitebox.gif)
+
+You ask an agent for a change and get back a wall of diff. What did it touch? Did it add a call to an outside service? What should I re-test? nacholens answers on one page.
+
 See what an AI changed in a backend, without reading code. nacholens turns a repository into one page: pick a use case and watch the request move from the client through your services, database and third parties, with the changed parts highlighted from `git diff`.
 
 ![nacholens: a request moving through the demo shop, changed parts highlighted](docs/images/overview.png)

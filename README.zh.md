@@ -2,6 +2,12 @@
 
 [English](README.md) · [日本語](README.ja.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · **中文** · [한국어](README.ko.md)
 
+**AI 智能体编程是个黑盒，nacholens 把它变成白盒。**
+
+![动效图（英文标注）。之前：让 AI 智能体改代码，拿回一大堆 diff 和三个没答案的问题（动了哪里、有没有新的外部调用、该重测什么）。之后：nacholens 展示请求如何穿过各服务，高亮改动和新增的部分，并回答这三个问题。](docs/images/blackbox-to-whitebox.gif)
+
+你让智能体改代码，拿回来的是一大堆 diff。它动了哪里？有没有新增对外部服务的调用？该重新测试什么？nacholens 用一个页面回答。
+
 不读代码，也能看清 AI 改了后端的哪些地方。nacholens 把一个代码仓库变成一个页面：选一个用例，就能看到请求从客户端经过你的服务、数据库和第三方服务，并根据 `git diff` 高亮显示改动的部分。
 
 ![nacholens：请求在演示商店中流动，改动部分被高亮](docs/images/overview.png)

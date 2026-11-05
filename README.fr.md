@@ -2,6 +2,12 @@
 
 [English](README.md) · [日本語](README.ja.md) · [Deutsch](README.de.md) · **Français** · [中文](README.zh.md) · [한국어](README.ko.md)
 
+**Le codage avec des agents IA est une boîte noire. nacholens en fait une boîte blanche.**
+
+![Animation (légendes en anglais). Avant : vous demandez un changement à un agent IA et recevez un mur de diff et trois questions sans réponse (qu'a-t-il touché, de nouveaux appels externes, que retester). Après : nacholens montre la requête à travers les services, met en évidence les parties modifiées et nouvelles, et répond aux trois.](docs/images/blackbox-to-whitebox.gif)
+
+Vous demandez un changement à un agent et recevez un mur de diff. Qu'a-t-il touché ? A-t-il ajouté un appel vers un service externe ? Que faut-il retester ? nacholens répond sur une seule page.
+
 Voyez ce qu'une IA a changé dans un backend, sans lire le code. nacholens transforme un dépôt en une seule page : choisissez un cas d'usage et regardez la requête passer du client à vos services, à la base de données et aux services tiers, les parties modifiées étant mises en évidence à partir de `git diff`.
 
 ![nacholens : une requête traverse la boutique de démonstration, parties modifiées en évidence](docs/images/overview.png)
