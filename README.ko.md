@@ -2,6 +2,12 @@
 
 [English](README.md) · [日本語](README.ja.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [中文](README.zh.md) · **한국어**
 
+**AI 에이전틱 코딩의 블랙박스를 nacholens로 화이트박스로 만듭니다.**
+
+![모션 그래픽. 이전: AI 에이전트에 변경을 시키면 diff 더미와 풀리지 않는 질문 세 가지(무엇을 건드렸나, 새 외부 호출은 없나, 무엇을 다시 테스트하나)가 남습니다. 이후: nacholens가 요청이 서비스를 지나가는 모습과 바뀐 곳, 새로 생긴 곳을 강조해 세 질문에 모두 답합니다.](docs/images/blackbox-to-whitebox.ko.gif)
+
+에이전트에 변경을 시키면 diff 더미가 돌아옵니다. 무엇을 건드렸는지, 새 외부 호출이 생겼는지, 무엇을 다시 테스트해야 하는지 알 수 없습니다. nacholens는 이 답을 한 페이지로 보여 줍니다.
+
 AI가 백엔드에서 무엇을 바꿨는지 코드를 읽지 않고 확인하세요. nacholens는 저장소를 한 페이지로 보여 줍니다. 유즈케이스를 고르면 요청이 클라이언트에서 서비스, 데이터베이스, 외부 서비스로 움직이고, `git diff`로 찾은 바뀐 곳이 강조됩니다.
 
 ![nacholens: 데모 쇼핑몰을 지나가는 요청과 강조된 변경 부분](docs/images/overview.png)

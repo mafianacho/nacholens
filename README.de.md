@@ -2,6 +2,12 @@
 
 [English](README.md) · [日本語](README.ja.md) · **Deutsch** · [Français](README.fr.md) · [中文](README.zh.md) · [한국어](README.ko.md)
 
+**KI-Agenten-Coding ist eine Blackbox. nacholens macht daraus eine Whitebox.**
+
+![Motion Graphic (englische Beschriftung). Vorher: Du beauftragst einen KI-Agenten und bekommst eine Wand aus Diff mit drei offenen Fragen (was wurde angefasst, neue externe Aufrufe, was neu testen). Nachher: nacholens zeigt die Anfrage durch die Dienste, hebt geänderte und neue Teile hervor und beantwortet alle drei.](docs/images/blackbox-to-whitebox.gif)
+
+Du beauftragst einen Agenten und bekommst eine Wand aus Diff zurück. Was wurde angefasst? Gibt es neue Aufrufe an externe Dienste? Was muss ich neu testen? nacholens beantwortet das auf einer Seite.
+
 Sieh, was eine KI in einem Backend geändert hat, ohne Code zu lesen. nacholens macht aus einem Repository eine einzige Seite: Wähle einen Anwendungsfall und sieh, wie die Anfrage vom Client durch deine Dienste, die Datenbank und Drittanbieter läuft. Die geänderten Teile sind aus `git diff` hervorgehoben.
 
 ![nacholens: eine Anfrage läuft durch den Demo-Shop, geänderte Teile hervorgehoben](docs/images/overview.png)
