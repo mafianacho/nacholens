@@ -1,6 +1,6 @@
 {
   "name": "@mafianacho/nacholens",
-  "version": "0.3.4",
+  "version": "0.4.0",
   "description": "See what an AI changed in a backend without reading code: use-case flow animation with a change overlay derived from git diff. Zero dependencies.",
   "license": "Apache-2.0",
   "type": "module",
@@ -25,6 +25,7 @@
     "docs/guide.ko.md",
     "docs/model-schema.md",
     "docs/review.md",
+    "docs/pr.md",
     "CHANGELOG.md",
     "LICENSE",
     "NOTICE",

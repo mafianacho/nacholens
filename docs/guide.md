@@ -71,6 +71,8 @@ With no model yet, the same command writes an empty template and lists every bla
 | `install --claude \| --agents \| --to DIR` | Put the skill and a self-contained CLI where an agent finds it |
 | `intent --model M --intent I [--repo R --base B]` | Check a planner's expectations (`intent.json`) against the model: met / unmet / unknown, plus changes no expectation points at. `--strict-intent` exits 4 on unmet |
 | `impact --repo R --base B` | Regression map: use cases to re-check (direct, or sharing a changed table / endpoint / part) and whether a test mentions them |
+| `snap --page P [--flows N] [--themes light,dark]` | Pictures of the built page for a PR: a still and one GIF per changed flow, via a local headless Chrome (Node 22+). [`pr.md`](pr.md) |
+| `pr --from OUT [--repo-url U --pr N] [--media-url M] [--player-url L]` | The build as one GitHub PR comment (`pr.md`): summary, diagrams, changed flows step by step, intent, re-test list, what the flows do not show. [`pr.md`](pr.md) |
 
 Review options for `build`: `--before-model <file>` (model written against the base commit; compares the flow itself) and `--intent <intent.json>`. See [`review.md`](review.md).
 Depth: `--depth 1|2|3` (or `diff|brief|full`) on `scan`, `validate`, `verify`, `build` (see below). `nacholens --version` prints the CLI version.
@@ -162,6 +164,7 @@ Model and overlay formats: [`model-schema.md`](model-schema.md).
 
 - [`skills/nacholens/SKILL.md`](../skills/nacholens/SKILL.md): the agent playbook (read this to understand quality criteria: evidence, step size, good/bad examples)
 - [`model-schema.md`](model-schema.md): `model.json` and `changes.json`
+- [`pr.md`](pr.md): explain a pull request in the pull request (`snap` + `pr`)
 - [`guide.ko.md`](guide.ko.md): 한국어 안내서
 - [`CONTRIBUTING.md`](../CONTRIBUTING.md), [`SECURITY.md`](../SECURITY.md)
 

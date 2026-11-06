@@ -36,6 +36,7 @@ Exemples de demandes:
 - `Qu'est-ce qui a changé dans les 5 derniers commits, et que dois-je retester ?`
 - `Montre comment fonctionne la connexion, du navigateur à la base de données.`
 - `Compare cette branche avec main : quels parcours ce travail a-t-il touchés ?`
+- `Explique la PR #12 dans la PR elle-même : images, parcours modifiés et ce qu'il faut retester.`
 
 ## Essayer la démo
 
@@ -47,7 +48,7 @@ npx -y @mafianacho/nacholens@latest demo
 ## Plus
 
 - [Guide](docs/guide.md) (en anglais) : commandes, fonctionnement de la vue des changements, limites
-- [Guide d'agent](skills/nacholens/SKILL.md), [format du modèle](docs/model-schema.md), [panneau de revue](docs/review.md)
+- [Guide d'agent](skills/nacholens/SKILL.md), [format du modèle](docs/model-schema.md), [panneau de revue](docs/review.md), [commentaire de PR](docs/pr.md)
 - [Contribuer](CONTRIBUTING.md), [Sécurité](SECURITY.md)
 
 Apache License 2.0 ([`LICENSE`](LICENSE), [`NOTICE`](NOTICE)). Les polices intégrées sont sous SIL Open Font License 1.1 ([`FONTLOG`](src/player/fonts/FONTLOG.md)). Made by [Mafianacho Inc.](https://mafianacho.com)

@@ -68,6 +68,15 @@ nacholens impact --repo R --base B --model M
 
 `--strict-intent` 에서 미충족 기대사항이 있으면 종료 코드 4.
 
+## PR 안에서 설명하기
+
+리뷰어가 PR 화면만 보고 이해하도록 build 결과를 PR 코멘트 하나로 만듭니다. 요약, 구조도(그림 또는 Mermaid), 바뀐 흐름별 단계(번호는 플레이어와 같음), 기획 대조, 다시 테스트할 체크리스트, 흐름에 안 잡힌 변경, 기준 커밋이 들어갑니다. 자세한 내용(영문): [`pr.md`](pr.md).
+
+```bash
+nacholens snap --page nacholens-out/<제품>.html --lang ko      # 선택: Node 22+, 로컬 Chrome 필요. 그림 + 흐름별 GIF (라이트·다크)
+nacholens pr   --from nacholens-out --lang ko --repo-url https://github.com/<o>/<r> --pr <번호> [--media-url …] [--player-url …]
+```
+
 ## 깊이: 1 변경만 · 2 한눈에 · 3 자세히
 
 모델을 쓰기 전에 **저장소의 어디까지 담을지**를 정합니다. 깊이는 세 가지이고, 말할 때는 **깊이 1 / 2 / 3** 이라고 합니다. 모델의 선택 필드 `"depth"` 에는 기술 이름(`diff` / `brief` / `full`)이 저장되고 `--depth` 는 둘 다 받습니다(`--depth 2` = `--depth brief`). 깊이 1 은 "얕다"가 아니라 **변경에 한정한다**는 뜻이며, 그 범위 안에서는 테이블·부품까지 담을 수 있습니다.

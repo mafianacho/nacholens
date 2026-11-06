@@ -36,6 +36,7 @@ nacholens로 이 저장소에 대한 아래 요청에, 열어 볼 수 있는 페
 - `최근 커밋 5개에서 뭐가 바뀌었고, 무엇을 다시 테스트해야 해?`
 - `로그인이 브라우저에서 데이터베이스까지 어떻게 흐르는지 보여 줘.`
 - `이 브랜치를 main과 비교해서 이번 작업이 건드린 흐름을 알려 줘.`
+- `PR #12를 PR 안에서 설명해 줘: 그림, 바뀐 흐름, 다시 테스트할 것.`
 
 ## 데모 보기
 
@@ -47,7 +48,7 @@ npx -y @mafianacho/nacholens@latest demo
 ## 더 보기
 
 - [안내서](docs/guide.ko.md): 명령, 변경 강조가 만들어지는 방식, 한계
-- [에이전트 플레이북](skills/nacholens/SKILL.md), [모델 형식](docs/model-schema.md), [검토 독](docs/review.md)
+- [에이전트 플레이북](skills/nacholens/SKILL.md), [모델 형식](docs/model-schema.md), [검토 독](docs/review.md), [PR 코멘트](docs/pr.md)
 - [기여하기](CONTRIBUTING.md), [보안](SECURITY.md)
 
 Apache License 2.0 ([`LICENSE`](LICENSE), [`NOTICE`](NOTICE)). 내장 글꼴은 SIL Open Font License 1.1을 따릅니다 ([`FONTLOG`](src/player/fonts/FONTLOG.md)). Made by [Mafianacho Inc.](https://mafianacho.com)

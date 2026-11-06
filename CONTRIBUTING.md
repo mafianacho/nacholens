@@ -23,6 +23,8 @@ The demo app itself (`demo/shop/v1`, `v2`) needs Node >= 22.13 (`node:sqlite`); 
 | `src/depth.js` | collection depth (`diff`/`brief`/`full`): the rules that warn, and `scan --depth diff` |
 | `scripts/derive-depth-models.js` | derives `model.brief.json` and `model.diff.json` (and the `depth` of `model.json`) for the demo shop |
 | `src/player/` | the page: template, CSS, JS (no framework, no network) |
+| `src/pr.js` | `pr`: the build as one GitHub PR comment (markdown, Mermaid) |
+| `src/snap.js`, `src/gif.js`, `src/png.js` | `snap`: pictures of the player via a local headless Chrome; GIF encoder and PNG decoder |
 | `src/install.js`, `src/demo.js` | `install` command; deterministic demo repository |
 | `skills/nacholens/SKILL.md` | what an agent reads to do the whole job |
 | `demo/`, `models/demo-shop/`, `examples/` | public demo app, its model, generated pages |

@@ -36,6 +36,7 @@ nacholens を使って、このリポジトリについての下の依頼に、�
 - `直近5コミットで何が変わった？何を再テストすべき？`
 - `ログインの流れを、ブラウザからデータベースまで見せて。`
 - `このブランチを main と比べて、この作業が触れたフローはどれ？`
+- `PR #12 を PR の中で説明して：図、変わったフロー、再テストすること。`
 
 ## デモを試す
 
@@ -47,7 +48,7 @@ npx -y @mafianacho/nacholens@latest demo
 ## 詳しく
 
 - [ガイド](docs/guide.md)（英語）: コマンド、変更オーバーレイの仕組み、制限
-- [エージェント用手順書](skills/nacholens/SKILL.md)、[モデル形式](docs/model-schema.md)、[レビュードック](docs/review.md)
+- [エージェント用手順書](skills/nacholens/SKILL.md)、[モデル形式](docs/model-schema.md)、[レビュードック](docs/review.md)、[PR コメント](docs/pr.md)
 - [コントリビュート](CONTRIBUTING.md)、[セキュリティ](SECURITY.md)
 
 Apache License 2.0（[`LICENSE`](LICENSE)、[`NOTICE`](NOTICE)）。同梱フォントは SIL Open Font License 1.1 です（[`FONTLOG`](src/player/fonts/FONTLOG.md)）。Made by [Mafianacho Inc.](https://mafianacho.com)

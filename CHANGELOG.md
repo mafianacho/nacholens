@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0
+
+**Explain a pull request in the pull request.** A reviewer who reads only the PR page understands what changed, in which flow, what the plan said and what to re-test. See `docs/pr.md`.
+
+- `nacholens pr --from <build out> [--repo-url … --pr N] [--media-url …] [--player-url …] [--lang ko]` writes `pr.md`, one GitHub comment: summary counts, an architecture picture or Mermaid diagram (changed parts yellow, new parts green), one section per changed flow (animation or Mermaid sequence diagram with the changed steps boxed, every step listed, changed steps with what happens, route, payload and code links into the PR's Files tab), the intent check, a re-test task list, changed files the flows do not show, and a folded "can I trust this" block naming the commit it was made for. One numbering everywhere (the player's step numbers). Nothing is guessed. No network.
+- `nacholens snap --page <html> [--flows N] [--fps N] [--themes light,dark] [--lang ko]` takes pictures of the real player with a local headless Chrome (Node 22+, DevTools protocol, no packages): `map.png` and one GIF per changed flow, light and dark, plus `manifest.json`. The GIF encoder (shared median-cut palette, changed rectangle only) and the PNG decoder are part of nacholens, so there are still no dependencies.
+- Player: `window.__nacholens.seek(step, at)` holds a step at one point of its motion (used by `snap`; the `#…&at=` capture hash uses the same code).
+- Skill: §9 "Put it in the pull request" (build → snap → host the pictures → pr → one sticky comment, asking before anything is pushed or posted).
+
 ## 0.3.4
 
 - Node: CI runs on Node 20, 22 and 24 (was 20 and 22); the publish workflow uses Node 24. `engines` stays `>=20`, so Node 20 and 22 users are not blocked. Docs say "Node 20+, checked on Node 24".

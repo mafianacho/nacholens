@@ -769,3 +769,24 @@ test("copy: a change shows up in the copied context only while the highlight is 
   sv.setOverlay(false);
   assert.ok(!/변경: /.test(sv.copyOf({ t: "step", u: "list-orders", i: k }).context));
 });
+
+test("seek (used by `nacholens snap`): step i frozen at a point of its motion, clock stopped, packet on the route", () => {
+  const { sv, clock } = load({ reduce: false });
+  sv.selectUseCase("list-orders");
+  const L = uc("list-orders"), i = L.steps.findIndex((s) => s.id === "shipping");
+  sv.play();
+  sv.seek(i, 0.25);
+  let st = sv.state;
+  assert.equal(st.step, i); assert.equal(st.playing, false); assert.equal(st.running, false); assert.equal(st.finished, false);
+  assert.equal(st.leg, 0, "a call step has two legs: 0.25 is on the way out");
+  const p1 = sv.packet();
+  assert.ok(p1, "the packet is drawn");
+  clock.advance(2000);
+  assert.deepEqual(sv.packet(), p1, "nothing moves while frozen");
+  assert.equal(sv.state.step, i, "and the player does not go on by itself");
+  sv.seek(i, 0.75);
+  st = sv.state;
+  assert.equal(st.leg, 1, "0.75 is on the way back");
+  assert.notDeepEqual(sv.packet(), p1);
+  sv.seek(0, 0); assert.equal(sv.state.step, 0);
+});

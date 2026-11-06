@@ -36,6 +36,7 @@
 - `最近 5 次提交改了什么？我需要重新测试哪些？`
 - `展示登录是怎么工作的，从浏览器到数据库。`
 - `把这个分支和 main 比较：这次工作涉及了哪些流程？`
+- `在 PR 里直接解释 PR #12：图片、改动的流程、需要重新测试的内容。`
 
 ## 试试演示
 
@@ -47,7 +48,7 @@ npx -y @mafianacho/nacholens@latest demo
 ## 更多
 
 - [指南](docs/guide.md)（英文）：命令、改动叠加的原理、局限
-- [助手操作手册](skills/nacholens/SKILL.md)、[模型格式](docs/model-schema.md)、[评审面板](docs/review.md)
+- [助手操作手册](skills/nacholens/SKILL.md)、[模型格式](docs/model-schema.md)、[评审面板](docs/review.md)、[PR 评论](docs/pr.md)
 - [参与贡献](CONTRIBUTING.md)、[安全](SECURITY.md)
 
 Apache License 2.0（[`LICENSE`](LICENSE)、[`NOTICE`](NOTICE)）。内嵌字体采用 SIL Open Font License 1.1（[`FONTLOG`](src/player/fonts/FONTLOG.md)）。Made by [Mafianacho Inc.](https://mafianacho.com)

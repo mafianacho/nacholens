@@ -14,6 +14,7 @@ import { makeDemoRepo } from "./demo.js";
 import { install, version } from "./install.js";
 import { DEPTHS, normalizeDepth, depthName, resolveDepth, checkDepth, sizeOf, scanDiff, formatScanDiff } from "./depth.js";
 import { buildReview, validateIntent, checkIntent, buildImpact, discoverTests, isTestFile } from "./review.js";
+import { buildPrComment } from "./pr.js";
 
 export const EXIT = { OK: 0, MODEL: 1, USAGE: 2, STRICT: 3, INTENT: 4 };
 
@@ -40,6 +41,13 @@ const USAGE = `nacholens — AI 가 바꾼 백엔드 변경을 유즈케이스 �
     nacholens build    <model.json> [--changes <파일>] ...                (저장소 없이 만들기)
     nacholens intent   --model <파일> --intent <intent.json> [--repo <경로> --base <ref>] [--strict-intent]   기획 의도 대조
     nacholens impact   --repo <경로> --base <ref> [--head <ref>] [--model <파일>]                           회귀 지도 (다시 확인할 유즈케이스)
+
+  PR 에 넣기 (build 결과로):
+    nacholens snap  --page <build 결과 .html> [--out <dir>] [--chrome <경로>] [--flows N] [--fps N] [--themes light,dark] [--lang en|ko]
+                    그림: map.png(+dark) · 바뀐 흐름별 GIF(+dark) · manifest.json  (Node 22+, 로컬 Chrome 필요, 네트워크 없음)
+    nacholens pr    --from <build --out 폴더> [--lang en|ko] [--repo-url https://github.com/<o>/<r>] [--pr N]
+                    [--player-url https://…] [--media-url https://…] [--out <pr.md>]
+                    PR 코멘트 마크다운 (요약·구조도·흐름별 시퀀스·단계·기획 대조·재테스트 체크리스트·모델 밖 변경)
 
   검토 패널 (build):  --before-model <파일>  변경 전 모델 (있으면 흐름 자체를 전/후 비교)
                       --intent <intent.json>  기획 의도 (기대사항을 모델과 대조)
@@ -245,6 +253,9 @@ export function run(argv, env = process.env, log = console.log) {
     return run(args, env, log);
   }
 
+  if (cmd === "snap") return runSnap(opt, log);
+  if (cmd === "pr") return runPr(opt, log);
+
   const modelArg = pos[0] ?? opt.model ?? (opt.repo ? defaultModelPath(opt.repo) : null);
   if (!modelArg) throw new Error("model.json 경로(또는 --repo)가 필요합니다\n" + USAGE);
   const needModel = () => {
@@ -430,12 +441,80 @@ export function run(argv, env = process.env, log = console.log) {
   throw new Error(`알 수 없는 명령: ${cmd}\n` + USAGE);
 }
 
+const HTTPS = /^https:\/\/[A-Za-z0-9.-]+(?::\d+)?(?:\/[^\s<>"'`()]*)?$/;
+function httpsOpt(opt, k) {
+  if (opt[k] === undefined) return null;
+  const v = String(opt[k]).trim();
+  if (!HTTPS.test(v) || v.length > 500) throw new Error(`--${k} 은 공백·따옴표·괄호 없는 https:// 주소여야 합니다 (500자 이하)`);
+  return v;
+}
+
+function runPr(opt, log) {
+  if (!opt.from) throw new Error("pr 는 --from <build --out 폴더> 가 필요합니다\n" + USAGE);
+  const dir = resolve(opt.from), at = (f) => join(dir, f);
+  const lang = opt.lang ?? "en";
+  if (!LANGS.includes(lang)) throw new Error(`--lang 은 ${LANGS.join("|")}`);
+  const repoUrl = httpsOpt(opt, "repo-url");
+  if (repoUrl && !/^https:\/\/[^/]+\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/?$/.test(repoUrl)) throw new Error("--repo-url 은 https://<호스트>/<owner>/<repo> 형식이어야 합니다");
+  let pr = null;
+  if (opt.pr !== undefined) {
+    if (!/^[1-9][0-9]{0,8}$/.test(String(opt.pr))) throw new Error("--pr 은 1 이상의 PR 번호여야 합니다");
+    if (!repoUrl) throw new Error("--pr 은 --repo-url 과 함께 써야 합니다");
+    pr = Number(opt.pr);
+  }
+  const playerUrl = httpsOpt(opt, "player-url"), mediaUrl = httpsOpt(opt, "media-url");
+  if (!existsSync(at("report.json"))) throw new Error(`${dir} 에 report.json 이 없습니다: 먼저 nacholens build --repo … --out ${opt.from} 를 실행하세요`);
+  const report = readJson(at("report.json"), "report.json");
+  const modelPath = opt.model ?? report.modelPath;
+  if (!modelPath || !existsSync(resolve(modelPath))) throw new Error(`모델을 찾을 수 없습니다 (${modelPath}): --model <파일> 로 지정하세요`);
+  const model = readJson(modelPath, "모델");
+  const errors = validateModel(model);
+  if (errors.length) { printErrors(errors, log); return EXIT.MODEL; }
+  const changes = existsSync(at("changes.json")) ? readJson(at("changes.json"), "changes.json") : null;
+  if (changes) { const bad = validateChanges(changes, model); if (bad.length) { printErrors(bad, log); return EXIT.MODEL; } }
+  const review = existsSync(at("review.json")) ? readJson(at("review.json"), "review.json") : null;
+  const mediaDir = resolve(opt.media ?? at("media"));
+  const media = existsSync(join(mediaDir, "manifest.json")) ? readJson(join(mediaDir, "manifest.json"), "media manifest") : null;
+  if (media && media.head && report.head && media.head !== report.head) log(`⚠ 그림(${String(media.head).slice(0, 7)})과 build(${String(report.head).slice(0, 7)})의 커밋이 다릅니다: snap 을 다시 실행하세요`);
+  if (media && !mediaUrl) log("그림이 있지만 --media-url 이 없어 그림 없이(다이어그램만) 만듭니다.");
+  const text = buildPrComment({ model, changes, review, report, media, opt: { lang, repoUrl, pr, playerUrl, mediaUrl, version: version() } });
+  const outFile = resolve(opt.out ?? at("pr.md"));
+  writeFileSync(outFile, text);
+  log(`생성: ${outFile} (${text.length}자)`);
+  if (mediaUrl && media?.files?.length) log(`그림 ${media.files.length}개를 ${mediaUrl}/ 아래에 올려야 코멘트에 보입니다 (${mediaDir})`);
+  return EXIT.OK;
+}
+
+async function runSnap(opt, log) {
+  if (!opt.page) throw new Error("snap 은 --page <build 결과 .html> 가 필요합니다\n" + USAGE);
+  const page = resolve(opt.page);
+  if (!existsSync(page)) throw new Error(`페이지가 없습니다: ${page}`);
+  const int = (k, lo, hi, d) => {
+    if (opt[k] === undefined) return d;
+    const n = Number(opt[k]);
+    if (!Number.isInteger(n) || n < lo || n > hi) throw new Error(`--${k} 은 ${lo}~${hi} 사이 정수`);
+    return n;
+  };
+  const themes = (opt.themes ?? "light,dark").split(",").map((t) => t.trim()).filter(Boolean);
+  if (!themes.length || themes.some((t) => t !== "light" && t !== "dark") || new Set(themes).size !== themes.length) throw new Error("--themes 는 light, dark 또는 light,dark");
+  const lang = opt.lang ?? "en";
+  if (!LANGS.includes(lang)) throw new Error(`--lang 은 ${LANGS.join("|")}`);
+  const { snap } = await import("./snap.js");
+  const m = await snap({ page, out: resolve(opt.out ?? join(dirname(page), "media")), chrome: opt.chrome, flows: int("flows", 0, 10, 3), fps: int("fps", 4, 25, 10), themes, lang, log });
+  log(`그림 ${m.files.length}개 · manifest.json`);
+  return EXIT.OK;
+}
+
 // npm starts bin entries through a symlink: compare real paths, or the CLI would silently do nothing
 const isMain = (() => {
   try { return !!process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url)); }
   catch { return false; }
 })();
 if (isMain) {
-  try { process.exitCode = run(process.argv.slice(2)); }
-  catch (e) { console.error("오류: " + e.message); process.exitCode = EXIT.USAGE; }
+  const fail = (e) => { console.error("오류: " + e.message); process.exitCode = EXIT.USAGE; };
+  try {
+    const r = run(process.argv.slice(2));
+    if (r && typeof r.then === "function") r.then((code) => { process.exitCode = code; }, fail);
+    else process.exitCode = r;
+  } catch (e) { fail(e); }
 }

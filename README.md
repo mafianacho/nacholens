@@ -38,6 +38,7 @@ Example requests:
 - `What changed in the last 5 commits, and what should I re-test?`
 - `Show how sign-in works, from the browser to the database.`
 - `Compare this branch with main: which flows did this work touch?`
+- `Explain PR #12 in the PR itself: pictures, the changed flows and what to re-test.`
 
 ## Try the demo
 
@@ -49,7 +50,7 @@ npx -y @mafianacho/nacholens@latest demo
 ## More
 
 - [Guide](docs/guide.md): commands, how the change overlay works, limits
-- [Agent playbook](skills/nacholens/SKILL.md), [model format](docs/model-schema.md), [review dock](docs/review.md)
+- [Agent playbook](skills/nacholens/SKILL.md), [model format](docs/model-schema.md), [review dock](docs/review.md), [PR comment](docs/pr.md)
 - [Contributing](CONTRIBUTING.md), [Security](SECURITY.md)
 
 Apache License 2.0 ([`LICENSE`](LICENSE), [`NOTICE`](NOTICE)). The embedded fonts are under the SIL Open Font License 1.1 ([`FONTLOG`](src/player/fonts/FONTLOG.md)). Made by [Mafianacho Inc.](https://mafianacho.com)
