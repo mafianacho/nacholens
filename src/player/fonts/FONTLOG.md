@@ -27,4 +27,4 @@ They are not covered by this project's Apache-2.0 license.
   declares the Reserved Font Name "Plex". Anton declares no Reserved Font Name and keeps its name.
 - Copyright, trademark, designer and license records are kept; a modification note is added to the copyright record.
 
-Rebuild: `python3 scripts/build-fonts.py <dir with the source .ttf files>` (needs `fonttools` and `brotli`).
+Rebuild (Node only, dev-only; the `.woff2` files are committed, so users and `npm test` never need it): `npm --prefix scripts/tools ci`, then `node scripts/build-fonts.mjs <dir with the source .ttf files>`. It uses `subset-font` (HarfBuzz as WebAssembly) from `scripts/tools/package.json`. The root package has no dependencies and does not ship `scripts/`.

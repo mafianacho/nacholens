@@ -62,6 +62,7 @@
     "demo": "node src/cli.js demo --out nacholens-demo",
     "build:depth-models": "node scripts/derive-depth-models.js",
     "build:examples": "node src/cli.js build models/demo-shop/model.json --changes models/demo-shop/changes.auto.json --intent models/demo-shop/intent.example.json --format both --out examples",
+    "build:fonts": "node scripts/build-fonts.mjs",
     "prepublishOnly": "node -e \"if(process.env.NACHOLENS_ALLOW_PUBLISH!=='1'){console.error('Publishing is blocked: set NACHOLENS_ALLOW_PUBLISH=1 only after the owner approved the release.');process.exit(1)}\" && npm test"
   }
 }

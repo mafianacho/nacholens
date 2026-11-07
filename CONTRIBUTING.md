@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping. nacholens has **no runtime dependencies** and wants to keep it that way: Node >= 20 (checked on Node 24) and git are enough.
+Thanks for helping. nacholens has **no runtime dependencies** and wants to keep it that way: Node >= 20 (checked on Node 24) and git are enough. The whole repository is Node: no Python, no other runtime.
 
 ## Set up
 
@@ -21,6 +21,7 @@ The demo app itself (`demo/shop/v1`, `v2`) needs Node >= 22.13 (`node:sqlite`); 
 | `src/verify.js`, `src/diff.js` | evidence check against the source; git diff → change overlay |
 | `src/scan.js` | leads for drafting a model (Node, Python, Go, infra files) |
 | `src/depth.js` | collection depth (`diff`/`brief`/`full`): the rules that warn, and `scan --depth diff` |
+| `scripts/build-fonts.mjs`, `docs/motion/encode.mjs`, `scripts/tools/` | dev-only: rebuild `src/player/fonts/*.woff2` and the README GIFs (`npm --prefix scripts/tools ci` first; `npm run build:fonts -- <font dir>`); `scripts/tools/package.json` holds their pinned dev packages and is never shipped |
 | `scripts/derive-depth-models.js` | derives `model.brief.json` and `model.diff.json` (and the `depth` of `model.json`) for the demo shop |
 | `src/player/` | the page: template, CSS, JS (no framework, no network) |
 | `src/pr.js` | `pr`: the build as one GitHub PR comment (markdown, Mermaid) |

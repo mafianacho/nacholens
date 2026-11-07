@@ -2,7 +2,7 @@
 // Capture frames of blackbox-to-whitebox.html with headless Chrome (DevTools protocol, no npm packages).
 //   node docs/motion/render.mjs --lang en --out /tmp/frames-en [--fps 25] [--at 7.5,9.4]   (--at = only those seconds)
 // Needs Node >= 22 (global WebSocket) and a Chrome/Chromium: set CHROME=/path/to/chrome if it is not on PATH.
-// Encode the frames with encode.py.
+// Encode the frames with encode.mjs.
 import { spawn } from "node:child_process";
 import { mkdirSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";

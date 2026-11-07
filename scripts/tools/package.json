@@ -1,0 +1,11 @@
+{
+  "name": "nacholens-dev-tools",
+  "private": true,
+  "type": "module",
+  "description": "Dev-only tools (font subsetting, README GIF encoding). Not part of the published package.",
+  "devDependencies": {
+    "gifenc": "1.0.3",
+    "pngjs": "7.0.0",
+    "subset-font": "2.9.0"
+  }
+}

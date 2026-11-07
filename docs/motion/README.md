@@ -15,14 +15,14 @@ parts are orange, the new outside call is green, and the three questions get the
   `npm pack pretendard@1.3.9` has it under `dist/web/variable/woff2/`), otherwise a system CJK font.
   Icons are inline line icons (one 1.8 px stroke family), no icon package.
 - `render.mjs`: captures frames with headless Chrome over the DevTools protocol (Node 22+, no npm packages).
-- `encode.py`: encodes the frames into a GIF with one shared palette (Pillow).
+- `encode.mjs`: encodes the frames into a GIF with one shared palette (Node; dev-only packages from `scripts/tools`: `npm --prefix scripts/tools ci`).
 
 ```bash
 export CHROME=/path/to/chrome                      # a Chrome or Chromium binary
 node docs/motion/render.mjs --lang en --out /tmp/fr-en        # 25 fps by default (--fps N)
-python3 docs/motion/encode.py /tmp/fr-en docs/images/blackbox-to-whitebox.gif --hold-last 1500
+node docs/motion/encode.mjs /tmp/fr-en docs/images/blackbox-to-whitebox.gif --hold-last 1500
 node docs/motion/render.mjs --lang ko --out /tmp/fr-ko
-python3 docs/motion/encode.py /tmp/fr-ko docs/images/blackbox-to-whitebox.ko.gif --hold-last 1500
+node docs/motion/encode.mjs /tmp/fr-ko docs/images/blackbox-to-whitebox.ko.gif --hold-last 1500
 ```
 
 To change the words, edit the `STR` table at the top of the HTML (one block per language). To retime a scene, edit the
