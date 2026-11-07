@@ -4,19 +4,23 @@
 
 **English** · [日本語](README.ja.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [中文](README.zh.md) · [한국어](README.ko.md)
 
-**AI agentic coding is a black box. nacholens makes it a white box.**
+**See what an AI changed in your code, without reading the code.**
 
-![Motion graphic. Before: you ask an AI agent for a change and get a wall of diff with three open questions (what did it touch, any new outside calls, what to re-test). After: nacholens shows a request moving through the services with the changed and new parts highlighted, and answers all three.](docs/images/blackbox-to-whitebox.gif)
+![Before: an AI agent returns a wall of diff and three open questions. After: nacholens shows a request moving through the services, with the changed and new parts highlighted, and answers the questions.](docs/images/blackbox-to-whitebox.gif)
 
-You ask an agent for a change and get back a wall of diff. What did it touch? Did it add a call to an outside service? What should I re-test? nacholens answers on one page.
+An AI agent changes your code and hands back a long diff. What did it touch? Does it now call an outside service? What should be tested again? nacholens answers with a picture you can play:
 
-See what an AI changed in a backend, without reading code. nacholens turns a repository into one page: pick a use case and watch the request move from the client through your services, database and third parties, with the changed parts highlighted from `git diff`.
+- **Pick something a user does** (sign in, place an order). A dot travels from the browser through your services, database and outside services, step by step.
+- **What changed is coloured**: yellow = changed, green = new.
+- **Every step points to the real code**, so nothing is guessed.
 
-![nacholens: a request moving through the demo shop, changed parts highlighted](docs/images/overview.png)
+For planners, testers and developers alike. You do not need to read code.
 
-## Use it
+## Use it in 3 steps
 
-Open your AI coding agent (Claude Code, Codex, Cursor, …) in the repository you want to see, copy the block below, write your request on the `My request:` line, and paste it.
+1. Open your AI coding agent (Claude Code, Codex, Cursor, …) in your project.
+2. Copy the block below, write what you want to see on the `My request:` line, and paste it.
+3. Open the page the agent gives you.
 
 ```text
 Use nacholens to answer my request below about this repository, as a page I can open.
@@ -33,24 +37,33 @@ How:
 4. When the page is built, give me its path and explain what it shows in plain words.
 ```
 
-Example requests:
+Things you can ask:
 
 - `What changed in the last 5 commits, and what should I re-test?`
 - `Show how sign-in works, from the browser to the database.`
 - `Compare this branch with main: which flows did this work touch?`
 - `Explain PR #12 in the PR itself: pictures, the changed flows and what to re-test.`
 
-## Try the demo
+## In your pull request
+
+nacholens can also write **one comment on the pull request**, so reviewers understand it from the PR page alone: pictures of the changed flows, each step in plain words with a link to its code, a re-test checklist, and what the pictures do not cover. [How it works](docs/pr.md)
+
+<img src="docs/images/pr-comment.png" alt="A nacholens comment on a pull request: summary, a picture with the changed parts highlighted, the first changed flow" width="600">
+
+## Try it without your own project
 
 ```bash
 npx -y @mafianacho/nacholens@latest demo
 # → ./nacholens-demo/demo-shop.html (open it in a browser)
 ```
 
+## Good to know
+
+- Your project is only read, never changed. nacholens itself sends nothing over the network.
+- No account, no server: just Node.js 20+ and git.
+
 ## More
 
-- [Guide](docs/guide.md): commands, how the change overlay works, limits
-- [Agent playbook](skills/nacholens/SKILL.md), [model format](docs/model-schema.md), [review dock](docs/review.md), [PR comment](docs/pr.md)
-- [Contributing](CONTRIBUTING.md), [Security](SECURITY.md)
+[Guide](docs/guide.md) · [Agent playbook](skills/nacholens/SKILL.md) · [Model format](docs/model-schema.md) · [Review dock](docs/review.md) · [PR comment](docs/pr.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
-Apache License 2.0 ([`LICENSE`](LICENSE), [`NOTICE`](NOTICE)). The embedded fonts are under the SIL Open Font License 1.1 ([`FONTLOG`](src/player/fonts/FONTLOG.md)). Made by [Mafianacho Inc.](https://mafianacho.com)
+Apache License 2.0 ([`LICENSE`](LICENSE), [`NOTICE`](NOTICE)). Embedded fonts: SIL Open Font License 1.1 ([`FONTLOG`](src/player/fonts/FONTLOG.md)). Made by [Mafianacho Inc.](https://mafianacho.com)
