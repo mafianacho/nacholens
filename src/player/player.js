@@ -1191,10 +1191,14 @@
   if (H0.focus && hasDetail(comp[H0.focus])) { SC.mode = "detail"; SC.focus = H0.focus; }
   renderTop(); drawStage();
   go(H0.step ? Number(H0.step) - 1 : -1, false);
-  if (H0.at != null && A.step >= 0) { // capture aid: #…&at=0.4 freezes the step at that point of its motion
+  function freezeAt(at) { // capture aid: hold the current step at one point (0..1) of its motion, clock stopped
+    if (A.step < 0) return;
     A.finished = false; A.legs = legsOf(uc().steps[A.step]);
-    if (A.legs.length) { var f = Math.max(0, Math.min(0.999, Number(H0.at))) * A.legs.length, li = Math.floor(f); startLeg(li, f - li); stopClock(); A.t = f - li; frameDraw(); paintStepState(); caption(); transport(); progress(); }
+    if (A.legs.length) { var f = Math.max(0, Math.min(0.999, Number(at) || 0)) * A.legs.length, li = Math.floor(f); startLeg(li, f - li); stopClock(); A.t = f - li; frameDraw(); paintStepState(); caption(); transport(); progress(); }
+    else { A.finished = true; paintStepState(); caption(); transport(); progress(); }
   }
+  function seek(i, at) { A.playing = false; go(i, false); freezeAt(at); } // `nacholens snap`: step i (0-based) frozen at `at`
+  if (H0.at != null && A.step >= 0) freezeAt(H0.at); // #…&at=0.4 freezes the step at that point of its motion
 
   window.__nacholens = {
     model: model, changes: changes, target: TARGET, hash: H0,
@@ -1203,7 +1207,7 @@
     legs: function (i) { return legsOf(uc().steps[i]).map(function (l) { return l.type === "move" ? { type: l.type, ids: l.ids.slice(), tone: l.tone, text: l.text } : { type: l.type, at: l.at }; }); },
     packet: function () { return MOVE && MOVE.pts ? { x: MOVE.x, y: MOVE.y, tone: MOVE.tone } : null; },
     tagged: function () { return Object.keys(NODE).filter(function (id) { return NODE[id].getAttribute("class").indexOf("chg-") >= 0; }).sort(); },
-    selectUseCase: selectUc, go: go, play: play, pause: pause, next: next, prev: prev,
+    selectUseCase: selectUc, go: go, seek: seek, play: play, pause: pause, next: next, prev: prev,
     openDetail: openDetail, closeDetail: closeDetail, switchFocus: switchFocus, selectItem: selectItem,
     setOverlay: setOverlay, relayout: relayout, copyOf: copyOf
   };

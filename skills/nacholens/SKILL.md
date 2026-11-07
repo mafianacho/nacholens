@@ -1,7 +1,7 @@
 ---
 name: nacholens
-description: Use when a user wants to SEE what an AI changed in a backend/infra repo without reading code. Builds a use-case flow animation (Claude -> artifact, others -> single HTML) with the changed parts highlighted from a git diff.
-version: 1.4.0
+description: Use when a user wants to SEE what an AI changed in a backend/infra repo without reading code, or wants a PR explained in the PR itself. Builds a use-case flow animation (Claude -> artifact, others -> single HTML) with the changed parts highlighted from a git diff, and a PR comment with pictures.
+version: 1.5.0
 ---
 
 # nacholens — show what an AI changed in a backend, without reading code
@@ -274,3 +274,15 @@ Full reference: `docs/review.md` in the repository. Use these when the user asks
 - **Intent check**: turn the planner's words into `intent.json` (`expectations[]`: `id`, `text` in the planner's own words, `useCase`, optional `check`). Give an expectation a `check` only when a model step can prove it (`step` / `absent` / `order`, matchers `kind|from|to|with|table|op|text`). If you cannot name the step that would prove it, **leave `check` out**: it is reported `unknown` and a human checks it. Never write a check just to get a green result. Run `intent` (or `build --intent`), then tell the user: met / unmet / unknown counts, which met expectations were touched by this work, and the *uncovered* changes (possible scope drift; the user decides).
 - **Regression map** needs `--repo --base`. Report the use cases to re-check and why (shared table / endpoint / part / wire), and the ones with `none-found` tests. `none-found` means "no test file mentions the route", not "untested".
 - Keep `verify` green first: all three views read the model, so a wrong model gives a wrong verdict.
+
+## 9. Put it in the pull request (nacholens ≥ 0.4.0)
+
+Use this when the user wants the change explained **in the PR itself** ("put it in the PR", "so reviewers understand from the PR alone"). Full reference: `docs/pr.md`. The goal: someone who reads only the PR page understands what changed, where, why it matters and what to re-test.
+
+1. **Build for the PR range**: `SV build --repo R --base <PR base branch or merge-base> --head <PR head> --out nacholens-out --lang <user's language>`. Add `--intent` when there is a plan (§8) and `--before-model` when you wrote one. Keep `verify` green: the comment is only as true as the model.
+2. **Pictures (optional)**: `SV snap --page nacholens-out/<product>.html --lang <lang>` (Node 22+ and a local Chrome; it finds Playwright's Chromium too). It writes `nacholens-out/media/` (`map.png`, one GIF per changed flow, dark versions, `manifest.json`). No Chrome: skip it, the comment still works with Mermaid diagrams.
+3. **Host the pictures (ask first)**: GitHub has no upload API for comments, so pictures need a URL. With the user's OK, push them to an orphan branch `nacholens-media` of the same repository under `pr-<n>/<head7>/` and pass `--media-url https://github.com/<o>/<r>/raw/<that commit>/pr-<n>/<head7>` (commands in `docs/pr.md`). Never put pictures of a private repository anywhere public. If pushing is not allowed, leave `--media-url` out.
+4. **Player link**: if you are Claude and gave the page as an artifact, the user can publish it ("Publish" gives a link anyone with the link can open). For a private repository ask before suggesting that. Pass the link as `--player-url`. Other agents: only link a page the user already hosts.
+5. **Write the comment**: `SV pr --from nacholens-out --lang <lang> --repo-url https://github.com/<o>/<r> --pr <n> [--media-url …] [--player-url …]` → `nacholens-out/pr.md`. Read it once before posting: the flow sections must name the use cases you expect, and the "outside the flows" list is the honest remainder (§4.1).
+6. **Post or update ONE comment (ask first unless asked)**: find the comment containing `<!-- nacholens:pr -->` and PATCH it, otherwise post it with `gh pr comment` (commands in `docs/pr.md`). After each new push to the PR, rebuild, re-snap and update the same comment; the comment names the commit it was made for.
+7. Tell the user the comment URL, what it shows (changed flows and steps by name) and what you left out (no pictures, no player link, flows listed by name only).

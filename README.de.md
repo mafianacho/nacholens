@@ -36,6 +36,7 @@ Beispielanfragen:
 - `Was hat sich in den letzten 5 Commits geändert, und was sollte ich erneut testen?`
 - `Zeig, wie die Anmeldung funktioniert, vom Browser bis zur Datenbank.`
 - `Vergleiche diesen Branch mit main: Welche Abläufe hat diese Arbeit berührt?`
+- `Erkläre PR #12 direkt im PR: Bilder, geänderte Abläufe und was erneut zu testen ist.`
 
 ## Demo ausprobieren
 
@@ -47,7 +48,7 @@ npx -y @mafianacho/nacholens@latest demo
 ## Mehr
 
 - [Anleitung](docs/guide.md) (Englisch): Befehle, wie die Änderungsansicht funktioniert, Grenzen
-- [Agenten-Playbook](skills/nacholens/SKILL.md), [Modellformat](docs/model-schema.md), [Review-Dock](docs/review.md)
+- [Agenten-Playbook](skills/nacholens/SKILL.md), [Modellformat](docs/model-schema.md), [Review-Dock](docs/review.md), [PR-Kommentar](docs/pr.md)
 - [Mitwirken](CONTRIBUTING.md), [Sicherheit](SECURITY.md)
 
 Apache License 2.0 ([`LICENSE`](LICENSE), [`NOTICE`](NOTICE)). Die eingebetteten Schriften stehen unter der SIL Open Font License 1.1 ([`FONTLOG`](src/player/fonts/FONTLOG.md)). Made by [Mafianacho Inc.](https://mafianacho.com)
