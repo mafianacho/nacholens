@@ -321,22 +321,22 @@ test("scan brief shows fewer leads per section than full, --limit still wins", (
 });
 
 /* ───────── version, docs and the package ───────── */
-test("0.4.0 everywhere it must be: package.json, CHANGELOG, CLI --version, the installed copy, the issue template", () => {
+test("0.5.0 everywhere it must be: package.json, CHANGELOG, CLI --version, the installed copy, the issue template", () => {
   const pkg = readJson("package.json");
-  assert.equal(pkg.version, "0.4.0");
-  assert.match(readFileSync(join(root, "CHANGELOG.md"), "utf8"), /^# Changelog\n\n## 0\.4\.0\n/);
+  assert.equal(pkg.version, "0.5.0");
+  assert.match(readFileSync(join(root, "CHANGELOG.md"), "utf8"), /^# Changelog\n\n## 0\.5\.0\n/);
   const c = cap();
   assert.equal(run(["--version"], {}, c.log), EXIT.OK);
-  assert.equal(c.text(), "0.4.0");
+  assert.equal(c.text(), "0.5.0");
   assert.equal(run(["version"], {}, () => {}), EXIT.OK);
-  assert.match(readFileSync(join(root, ".github/ISSUE_TEMPLATE/bug_report.yml"), "utf8"), /placeholder: "0\.4\.0, /);
+  assert.match(readFileSync(join(root, ".github/ISSUE_TEMPLATE/bug_report.yml"), "utf8"), /placeholder: "0\.5\.0, /);
   // `install` vendors the version and a playbook that explains the depths
   const proj = tmp();
   assert.equal(run(["install", "--agents", "--into", proj], {}, () => {}), EXIT.OK);
-  assert.equal(readFileSync(join(proj, ".nacholens/cli/VERSION"), "utf8").trim(), "0.4.0");
-  assert.equal(JSON.parse(readFileSync(join(proj, ".nacholens/cli/package.json"), "utf8")).version, "0.4.0");
+  assert.equal(readFileSync(join(proj, ".nacholens/cli/VERSION"), "utf8").trim(), "0.5.0");
+  assert.equal(JSON.parse(readFileSync(join(proj, ".nacholens/cli/package.json"), "utf8")).version, "0.5.0");
   const installedCli = join(proj, ".nacholens/cli/src/cli.js");
-  assert.equal(execFileSync(process.execPath, [installedCli, "--version"], { encoding: "utf8" }).trim(), "0.4.0");
+  assert.equal(execFileSync(process.execPath, [installedCli, "--version"], { encoding: "utf8" }).trim(), "0.5.0");
   const skill = readFileSync(join(proj, ".nacholens/SKILL.md"), "utf8");
   assert.match(skill, /nacholens ≥ 0\.3\.2/);
   assert.match(skill, /Pick the depth first/);
@@ -347,7 +347,7 @@ test("0.4.0 everywhere it must be: package.json, CHANGELOG, CLI --version, the i
 
 test("SKILL.md explains the choice (default included), the content of each depth, size guides and a procedure per depth", () => {
   const s = readFileSync(join(root, "skills/nacholens/SKILL.md"), "utf8");
-  assert.match(s, /^version: 1\.5\.0$/m);
+  assert.match(s, /^version: 1\.6\.0$/m);
   assert.match(s, /## 0\.1 Pick the depth first/);
   assert.match(s, /Say it to the user as depth 1 \/ 2 \/ 3, never as the technical name/);
   for (const d of DEPTHS) {
@@ -384,7 +384,7 @@ test("npm pack ships everything depth needs (sources, models, changelog, skill, 
   for (const f of ["src/depth.js", "src/scan.js", "src/cli.js", "src/install.js", "src/pr.js", "src/snap.js", "src/gif.js", "src/png.js", "docs/pr.md", "docs/pr.ko.md", "CHANGELOG.md", "skills/nacholens/SKILL.md", "models/demo-shop/model.json", "models/demo-shop/model.brief.json", "models/demo-shop/model.diff.json", "docs/guide.md", "docs/guide.ko.md", "docs/model-schema.md", "package.json"])
     assert.ok(files.has(f), `package is missing ${f}`);
   assert.ok([...files].every((f) => !f.startsWith("test/")), "no tests in the package");
-  assert.equal(out[0].version, "0.4.0");
+  assert.equal(out[0].version, "0.5.0");
   // every relative import of a shipped source file is shipped too
   for (const f of files) {
     if (!/^src\/[^/]+\.js$/.test(f)) continue;

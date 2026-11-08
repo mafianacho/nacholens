@@ -29,7 +29,7 @@ nacholens로 이 저장소에 대한 아래 요청에, 열어 볼 수 있는 페
 깊이(선택): 1 변경만 · 2 한눈에 · 3 자세히(테이블과 내부까지). 안 적으면 요청에 맞춰 고르고 알려 줘.
 
 방법:
-1. nacholens 플레이북과 CLI를 받는다 (Node.js 20 이상, Node 24에서 확인함, git 필요, 이 저장소에는 아무것도 설치하지 않음):
+1. nacholens 플레이북과 CLI를 받는다 (Node.js 24 이상, git 필요, 이 저장소에는 아무것도 설치하지 않음):
    npx -y @mafianacho/nacholens@latest install --to "$HOME/.nacholens-skill" --force
 2. "$HOME/.nacholens-skill/nacholens/SKILL.md" 를 읽고 그대로 따른다. CLI는 다음과 같다:
    node "$HOME/.nacholens-skill/nacholens/cli/src/cli.js" <command>
@@ -60,7 +60,7 @@ npx -y @mafianacho/nacholens@latest demo
 ## 알아 두면 좋은 것
 
 - 프로젝트는 읽기만 하고 바꾸지 않습니다. nacholens 자체는 네트워크로 아무것도 보내지 않습니다.
-- 계정도 서버도 필요 없습니다. Node.js 20+ 와 git 만 있으면 됩니다.
+- 계정도 서버도 필요 없습니다. Node.js 24+ 와 git 만 있으면 됩니다.
 
 ## 더 보기
 

@@ -19,7 +19,7 @@ Pick a use case ("sign in", "list orders") and watch a request travel from the c
 
 ## 5-minute start
 
-You need **Node.js ≥ 20** (checked on Node 24) and **git**. Nothing to install.
+You need **Node.js 24+** and **git**. Nothing to install.
 
 ### 1. Look at the demo (30 seconds)
 
@@ -71,8 +71,10 @@ With no model yet, the same command writes an empty template and lists every bla
 | `install --claude \| --agents \| --to DIR` | Put the skill and a self-contained CLI where an agent finds it |
 | `intent --model M --intent I [--repo R --base B]` | Check a planner's expectations (`intent.json`) against the model: met / unmet / unknown, plus changes no expectation points at. `--strict-intent` exits 4 on unmet |
 | `impact --repo R --base B` | Regression map: use cases to re-check (direct, or sharing a changed table / endpoint / part) and whether a test mentions them |
-| `snap --page P [--flows N] [--themes light,dark]` | Pictures of the built page for a PR: a still and one GIF per changed flow, via a local headless Chrome (Node 22+). [`pr.md`](pr.md) |
-| `pr --from OUT [--repo-url U --pr N] [--media-url M] [--player-url L]` | The build as one GitHub PR comment (`pr.md`): summary, diagrams, changed flows step by step, intent, re-test list, what the flows do not show. [`pr.md`](pr.md) |
+| `snap --page P [--flows N] [--themes light,dark] [--optional]` | Pictures of the built page for a PR: a still and one GIF per changed flow, via a local headless Chrome (Node 24+). [`pr.md`](pr.md) |
+| `pr --from OUT [--repo-url U --pr N] [--media-url M] [--player-url L] [--comment]` | The build as one GitHub PR comment (`pr.md`): summary, diagrams, changed flows step by step, intent, re-test list, what the flows do not show. `--comment` posts it, or updates the one that is already there. [`pr.md`](pr.md) |
+| `media upload --from OUT --pr N` | Host the `snap` pictures on the `nacholens-media` branch (`pr-<n>/<head7>/`), no new commit when nothing changed; writes the pinned URL that `pr` uses. [`pr.md`](pr.md) |
+| `media prune [--apply] [--superseded]` | List (dry run) or remove the pictures of closed and merged PRs, in a new commit. [`pr.md`](pr.md) |
 
 Review options for `build`: `--before-model <file>` (model written against the base commit; compares the flow itself) and `--intent <intent.json>`. See [`review.md`](review.md).
 Depth: `--depth 1|2|3` (or `diff|brief|full`) on `scan`, `validate`, `verify`, `build` (see below). `nacholens --version` prints the CLI version.
@@ -180,7 +182,7 @@ demo/shop/        public demo app v1 → v2     models/demo-shop/   its model an
 skills/nacholens/SKILL.md                   examples/           generated demo pages (tested)
 ```
 
-`npm test` runs everything (about a second). The demo app needs Node ≥ 22.13 (`node:sqlite`) to run; the tool itself needs Node ≥ 20. CI runs on Node 20, 22 and 24.
+`npm test` runs everything (about a second). The tool and the demo app need Node 24+ (`node:sqlite` is built in). CI runs on Node 24.
 
 ## License
 

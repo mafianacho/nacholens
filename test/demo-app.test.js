@@ -1,5 +1,5 @@
 // The public demo shop really runs end to end (so the model describing it is not fiction).
-// Spawns the three processes on free ports; needs node:sqlite (Node >= 22.13), else skipped.
+// Spawns the three processes on free ports; needs node:sqlite (built into Node 24).
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -7,7 +7,6 @@ import { createServer } from "node:net";
 import { join } from "node:path";
 import { root } from "./helpers.js";
 
-const hasSqlite = await import("node:sqlite").then(() => true, () => false);
 // A port that can be bound explicitly (some sandboxes only allow certain ranges); retried until one works.
 async function bindablePort() {
   for (let i = 0; i < 50; i++) {
@@ -45,7 +44,7 @@ async function runShop(version, fn) {
 }
 
 for (const version of ["v1", "v2"]) {
-  test(`demo shop ${version}: sign-in, order, list, report, replay and origin checks work through the gateway`, { skip: !hasSqlite }, async () => {
+  test(`demo shop ${version}: sign-in, order, list, report, replay and origin checks work through the gateway`, async () => {
     await runShop(version, async (base) => {
       const get = (path, init = {}) => fetch(base + path, { redirect: "manual", ...init });
       const start = await get("/api/auth/start");

@@ -19,7 +19,7 @@
 
 ## 5분 시작
 
-필요한 것: **Node.js ≥ 20(Node 24에서 확인함)** 과 **git** (설치할 패키지 없음).
+필요한 것: **Node.js 24+** 와 **git** (설치할 패키지 없음).
 
 ### 1. 데모 보기 (30초)
 
@@ -83,8 +83,9 @@ nacholens impact --repo R --base B --model M
 리뷰어가 PR 화면만 보고 이해하도록 build 결과를 PR 코멘트 하나로 만듭니다. 요약, 구조도(그림 또는 Mermaid), 바뀐 흐름별 단계(번호는 플레이어와 같음), 기획 대조, 다시 테스트할 체크리스트, 흐름에 안 잡힌 변경, 기준 커밋이 들어갑니다. 자세한 내용: [`pr.ko.md`](pr.ko.md).
 
 ```bash
-nacholens snap --page nacholens-out/<제품>.html --lang ko      # 선택: Node 22+, 로컬 Chrome 필요. 그림 + 흐름별 GIF (라이트·다크)
-nacholens pr   --from nacholens-out --lang ko --repo-url https://github.com/<o>/<r> --pr <번호> [--media-url …] [--player-url …]
+nacholens snap --page nacholens-out/<제품>.html --lang ko      # 선택: Node 24+, 로컬 Chrome 필요. 그림 + 흐름별 GIF (라이트·다크)
+nacholens media upload --from nacholens-out --pr <번호>        # 선택: 그림을 nacholens-media 브랜치에 올림
+nacholens pr   --from nacholens-out --lang ko --repo-url https://github.com/<o>/<r> --pr <번호> [--media-url …] [--player-url …] [--comment]
 ```
 
 ## 명령
@@ -103,8 +104,10 @@ nacholens pr   --from nacholens-out --lang ko --repo-url https://github.com/<o>/
 | `install --claude \| --agents \| --to DIR` | 에이전트가 찾을 수 있는 곳에 스킬과 자체 완결형 CLI 를 놓습니다 |
 | `intent --model M --intent I [--repo R --base B]` | 기획자의 기대사항(`intent.json`)을 모델에 대조합니다: 충족 / 미충족 / 확인 불가, 그리고 어떤 기대사항도 가리키지 않는 변경. `--strict-intent` 는 미충족이면 종료 코드 4 |
 | `impact --repo R --base B` | 회귀 지도: 다시 확인할 유즈케이스(직접 변경, 또는 바뀐 테이블 / 엔드포인트 / 부품을 공유)와 테스트가 그것을 언급하는지 |
-| `snap --page P [--flows N] [--themes light,dark]` | PR 용으로 빌드된 페이지의 그림: 정지 그림 하나와 바뀐 흐름마다 GIF 하나. 로컬 headless Chrome 을 씁니다(Node 22+). [`pr.ko.md`](pr.ko.md) |
-| `pr --from OUT [--repo-url U --pr N] [--media-url M] [--player-url L]` | build 결과를 GitHub PR 코멘트 하나(`pr.md`)로: 요약, 다이어그램, 바뀐 흐름의 단계별 설명, 기획 대조, 다시 테스트할 목록, 흐름이 보여 주지 못하는 것. [`pr.ko.md`](pr.ko.md) |
+| `snap --page P [--flows N] [--themes light,dark] [--optional]` | PR 용으로 빌드된 페이지의 그림: 정지 그림 하나와 바뀐 흐름마다 GIF 하나. 로컬 headless Chrome 을 씁니다(Node 24+). [`pr.ko.md`](pr.ko.md) |
+| `pr --from OUT [--repo-url U --pr N] [--media-url M] [--player-url L] [--comment]` | build 결과를 GitHub PR 코멘트 하나(`pr.md`)로: 요약, 다이어그램, 바뀐 흐름의 단계별 설명, 기획 대조, 다시 테스트할 목록, 흐름이 보여 주지 못하는 것. `--comment` 는 코멘트를 달거나, 이미 있으면 갱신합니다. [`pr.ko.md`](pr.ko.md) |
+| `media upload --from OUT --pr N` | `snap` 그림을 `nacholens-media` 브랜치(`pr-<n>/<head7>/`)에 올립니다. 바뀐 것이 없으면 새 커밋을 만들지 않고, `pr` 이 쓰는 고정 URL을 적어 둡니다. [`pr.ko.md`](pr.ko.md) |
+| `media prune [--apply] [--superseded]` | 닫히거나 머지된 PR 의 그림을 보여 주고(모의 실행), `--apply` 를 주면 새 커밋으로 지웁니다. [`pr.ko.md`](pr.ko.md) |
 
 `build` 의 검토 옵션: `--before-model <file>`(기준 커밋에 맞춰 쓴 모델, 흐름 자체를 비교합니다)과 `--intent <intent.json>`. [`review.md`](review.md) 를 보세요.
 깊이: `scan`, `validate`, `verify`, `build` 의 `--depth 1|2|3`(또는 `diff|brief|full`) (아래 참고). `nacholens --version` 은 CLI 버전을 출력합니다.
@@ -211,7 +214,7 @@ demo/shop/        공개 데모 앱 v1 → v2         models/demo-shop/   그 �
 skills/nacholens/SKILL.md                      examples/           생성된 데모 페이지 (시험함)
 ```
 
-`npm test` 는 모든 것을 실행합니다(약 1초). 데모 앱을 실행하려면 Node ≥ 22.13(`node:sqlite`)이 필요하고, 도구 자체는 Node ≥ 20이면 됩니다. CI 는 Node 20, 22, 24 에서 돕니다.
+`npm test` 는 모든 것을 실행합니다(약 1초). 도구와 데모 앱 모두 Node 24+ 가 필요합니다(`node:sqlite` 가 내장되어 있습니다). CI 는 Node 24 에서 돕니다.
 
 ## 라이선스
 
