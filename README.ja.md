@@ -1,20 +1,26 @@
 # nacholens
 
+[![npm version](https://img.shields.io/npm/v/@mafianacho/nacholens)](https://www.npmjs.com/package/@mafianacho/nacholens) [![CI](https://github.com/mafianacho/nacholens/actions/workflows/ci.yml/badge.svg)](https://github.com/mafianacho/nacholens/actions/workflows/ci.yml) [![License: Apache-2.0](https://img.shields.io/npm/l/@mafianacho/nacholens)](LICENSE)
+
 [English](README.md) · **日本語** · [Deutsch](README.de.md) · [Français](README.fr.md) · [中文](README.zh.md) · [한국어](README.ko.md)
 
-**AIエージェントによるコーディングはブラックボックスです。nacholens はそれをホワイトボックスにします。**
+**AIがコードに加えた変更を、コードを読まずに確かめられます。**
 
-![モーショングラフィック（英語表記）。変更前：AIエージェントに変更を頼むと差分の山と3つの疑問（何に触れたか、外部への新しい呼び出しはあるか、何を再テストするか）が残る。変更後：nacholens がリクエストの流れと変更箇所・新規箇所を強調し、3つすべてに答える。](docs/images/blackbox-to-whitebox.gif)
+![変更前：AIエージェントが差分の山と3つの疑問を返す。変更後：nacholens がリクエストがサービスを流れる様子を見せ、変更箇所と新規箇所を強調して、その疑問に答える（画像内は英語表記）。](docs/images/blackbox-to-whitebox.gif)
 
-エージェントに変更を頼むと、差分の山が返ってきます。何に触れたのか、外部サービスへの新しい呼び出しが増えたのか、何を再テストすべきかが分かりません。nacholens はその答えを1ページで見せます。
+AIエージェントがコードを変更し、長い差分を返してきます。何に触れたのか、外部サービスを呼ぶようになったのか、何を再テストすべきか。nacholens は、再生できる図で答えます。
 
-AIがバックエンドに加えた変更を、コードを読まずに確かめられます。nacholens はリポジトリを1枚のページにします。ユースケースを選ぶと、リクエストがクライアントからサービス、データベース、外部サービスへと動き、`git diff` から求めた変更箇所が強調されます。
+- **ユーザーの操作を選びます**（ログイン、注文）。点がブラウザからサービス、データベース、外部サービスへと1ステップずつ進みます。
+- **変更箇所は色で分かります**：黄 = 変更、緑 = 新規。
+- **どのステップも実際のコードを指す**ので、推測はありません。
 
-![nacholens: デモショップを流れるリクエストと強調された変更箇所](docs/images/overview.png)
+企画担当、テスター、開発者の誰でも使えます。コードを読む必要はありません。
 
-## 使い方
+## 3ステップで使う
 
-見たいリポジトリで AI コーディングエージェント（Claude Code、Codex、Cursor など）を開き、下のブロックをコピーして `依頼:` の行に見たいことを書き、そのまま貼り付けてください。
+1. プロジェクトで AI コーディングエージェント（Claude Code、Codex、Cursor など）を開きます。
+2. 下のブロックをコピーし、`依頼:` の行に見たいことを書いて貼り付けます。
+3. エージェントが教えてくれるページを開きます。
 
 ```text
 nacholens を使って、このリポジトリについての下の依頼に、開けるページで答えてください。
@@ -31,24 +37,33 @@ nacholens を使って、このリポジトリについての下の依頼に、�
 4. ページができたら、そのパスを伝え、何が分かるかを平易な言葉で説明する。
 ```
 
-依頼の例:
+こんなことを頼めます:
 
 - `直近5コミットで何が変わった？何を再テストすべき？`
 - `ログインの流れを、ブラウザからデータベースまで見せて。`
 - `このブランチを main と比べて、この作業が触れたフローはどれ？`
 - `PR #12 を PR の中で説明して：図、変わったフロー、再テストすること。`
 
-## デモを試す
+## プルリクエストの中で
+
+nacholens は**プルリクエストに1つのコメント**を書くこともでき、レビュアーは PR のページだけで内容を理解できます。変更されたフローの図、コードへのリンク付きでやさしい言葉にした各ステップ、再テストのチェックリスト、図がカバーしない範囲が入ります。[仕組み](docs/pr.md)
+
+<img src="docs/images/pr-comment.png" alt="プルリクエスト上の nacholens のコメント（英語表記）：概要、変更箇所を強調した図、最初に変更されたフロー" width="600">
+
+## 自分のプロジェクトなしで試す
 
 ```bash
 npx -y @mafianacho/nacholens@latest demo
 # → ./nacholens-demo/demo-shop.html（ブラウザで開く）
 ```
 
+## 知っておくと良いこと
+
+- プロジェクトは読み取るだけで、変更しません。nacholens 自体はネットワークに何も送信しません。
+- アカウントもサーバーも不要です。Node.js 20+ と git だけで動きます。
+
 ## 詳しく
 
-- [ガイド](docs/guide.md)（英語）: コマンド、変更オーバーレイの仕組み、制限
-- [エージェント用手順書](skills/nacholens/SKILL.md)、[モデル形式](docs/model-schema.md)、[レビュードック](docs/review.md)、[PR コメント](docs/pr.md)
-- [コントリビュート](CONTRIBUTING.md)、[セキュリティ](SECURITY.md)
+[ガイド](docs/guide.md)（英語） · [エージェント用手順書](skills/nacholens/SKILL.md) · [モデル形式](docs/model-schema.md) · [レビュードック](docs/review.md) · [PR コメント](docs/pr.md)（英語） · [コントリビュート](CONTRIBUTING.md) · [セキュリティ](SECURITY.md)
 
-Apache License 2.0（[`LICENSE`](LICENSE)、[`NOTICE`](NOTICE)）。同梱フォントは SIL Open Font License 1.1 です（[`FONTLOG`](src/player/fonts/FONTLOG.md)）。Made by [Mafianacho Inc.](https://mafianacho.com)
+Apache License 2.0（[`LICENSE`](LICENSE)、[`NOTICE`](NOTICE)）。同梱フォント: SIL Open Font License 1.1（[`FONTLOG`](src/player/fonts/FONTLOG.md)）。Made by [Mafianacho Inc.](https://mafianacho.com)
