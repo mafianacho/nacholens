@@ -23,7 +23,7 @@ Ma demande : <écrivez ici ce que vous voulez voir>
 Profondeur (facultatif) : 1 changements seuls · 2 vue d'ensemble · 3 détaillé (tables et intérieur). Sans précision, choisis selon ma demande et dis-moi laquelle.
 
 Comment :
-1. Récupère le guide d'agent et la CLI de nacholens (Node.js 20+, vérifié avec Node 24, et git nécessaires ; rien n'est installé dans ce dépôt) :
+1. Récupère le guide d'agent et la CLI de nacholens (Node.js 24+ et git nécessaires ; rien n'est installé dans ce dépôt) :
    npx -y @mafianacho/nacholens@latest install --to "$HOME/.nacholens-skill" --force
 2. Lis "$HOME/.nacholens-skill/nacholens/SKILL.md" et suis-le. La CLI est :
    node "$HOME/.nacholens-skill/nacholens/cli/src/cli.js" <command>

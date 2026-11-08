@@ -29,7 +29,7 @@ My request: <write what you want to see here>
 Depth (optional): 1 Changes only · 2 Overview · 3 Detailed (tables and internals). If I name none, pick by my request and tell me which.
 
 How:
-1. Get the nacholens playbook and CLI (needs Node.js 20+, checked on Node 24, and git; nothing is installed into this repository):
+1. Get the nacholens playbook and CLI (needs Node.js 24+ and git; nothing is installed into this repository):
    npx -y @mafianacho/nacholens@latest install --to "$HOME/.nacholens-skill" --force
 2. Read "$HOME/.nacholens-skill/nacholens/SKILL.md" and follow it. The CLI is:
    node "$HOME/.nacholens-skill/nacholens/cli/src/cli.js" <command>
@@ -42,11 +42,11 @@ Things you can ask:
 - `What changed in the last 5 commits, and what should I re-test?`
 - `Show how sign-in works, from the browser to the database.`
 - `Compare this branch with main: which flows did this work touch?`
-- `Explain PR #12 in the PR itself: pictures, the changed flows and what to re-test.`
+- `Explain PR #12 in the PR: pictures, changed flows and what to re-test.`
 
 ## In your pull request
 
-nacholens can also write **one comment on the pull request**, so reviewers understand it from the PR page alone: pictures of the changed flows, each step in plain words with a link to its code, a re-test checklist, and what the pictures do not cover. [How it works](docs/pr.md)
+nacholens can also write **one comment on the pull request**, so reviewers understand it from the PR page alone: pictures of the changed flows, each step in plain words with a link to its code, a re-test checklist, and what is not covered. [How it works](docs/pr.md)
 
 <img src="docs/images/pr-comment.png" alt="A nacholens comment on a pull request: summary, a picture with the changed parts highlighted, the first changed flow" width="600">
 
@@ -60,10 +60,10 @@ npx -y @mafianacho/nacholens@latest demo
 ## Good to know
 
 - Your project is only read, never changed. nacholens itself sends nothing over the network.
-- No account, no server: just Node.js 20+ and git.
+- No account, no server: just Node.js 24+ and git.
 
 ## More
 
-[Guide](docs/guide.md) · [Agent playbook](skills/nacholens/SKILL.md) · [Model format](docs/model-schema.md) · [Review dock](docs/review.md) · [PR comment](docs/pr.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+[Guide](docs/guide.md) · [Agent playbook](skills/nacholens/SKILL.md) · [Model format](docs/model-schema.md) · [Review dock](docs/review.md) · [PR comment](docs/pr.md) · [Action example](docs/action/nacholens-pr.yml) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
 Apache License 2.0 ([`LICENSE`](LICENSE), [`NOTICE`](NOTICE)). Embedded fonts: SIL Open Font License 1.1 ([`FONTLOG`](src/player/fonts/FONTLOG.md)). Made by [Mafianacho Inc.](https://mafianacho.com)

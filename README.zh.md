@@ -23,7 +23,7 @@
 深度（可选）：1 仅变更 · 2 概览 · 3 详细（含表和内部）。不写就按我的请求选择，并告诉我选了哪个。
 
 做法：
-1. 获取 nacholens 的操作手册和 CLI（需要 Node.js 20+（已在 Node 24 上验证）和 git；不会往这个仓库安装任何东西）：
+1. 获取 nacholens 的操作手册和 CLI（需要 Node.js 24+ 和 git；不会往这个仓库安装任何东西）：
    npx -y @mafianacho/nacholens@latest install --to "$HOME/.nacholens-skill" --force
 2. 阅读 "$HOME/.nacholens-skill/nacholens/SKILL.md" 并照做。CLI 是：
    node "$HOME/.nacholens-skill/nacholens/cli/src/cli.js" <command>

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import "./node-check.js"; // first: an older Node stops here with a clear message
 import { readFileSync, writeFileSync, mkdirSync, existsSync, mkdtempSync, rmSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve, dirname, basename } from "node:path";
@@ -15,6 +16,8 @@ import { install, version } from "./install.js";
 import { DEPTHS, normalizeDepth, depthName, resolveDepth, checkDepth, sizeOf, scanDiff, formatScanDiff } from "./depth.js";
 import { buildReview, validateIntent, checkIntent, buildImpact, discoverTests, isTestFile } from "./review.js";
 import { buildPrComment } from "./pr.js";
+import { upsertComment } from "./pr-comment.js";
+import { uploadMedia, pruneMedia, MEDIA_BRANCH } from "./media.js";
 
 export const EXIT = { OK: 0, MODEL: 1, USAGE: 2, STRICT: 3, INTENT: 4 };
 
@@ -43,11 +46,19 @@ const USAGE = `nacholens — AI 가 바꾼 백엔드 변경을 유즈케이스 �
     nacholens impact   --repo <경로> --base <ref> [--head <ref>] [--model <파일>]                           회귀 지도 (다시 확인할 유즈케이스)
 
   PR 에 넣기 (build 결과로):
-    nacholens snap  --page <build 결과 .html> [--out <dir>] [--chrome <경로>] [--flows N] [--fps N] [--themes light,dark] [--lang en|ko]
-                    그림: map.png(+dark) · 바뀐 흐름별 GIF(+dark) · manifest.json  (Node 22+, 로컬 Chrome 필요, 네트워크 없음)
+    nacholens snap  --page <build 결과 .html> [--out <dir>] [--chrome <경로>] [--flows N] [--fps N] [--themes light,dark] [--lang en|ko] [--optional]
+                    그림: map.png(+dark) · 바뀐 흐름별 GIF(+dark) · manifest.json  (Node 24+, 로컬 Chrome 필요, 네트워크 없음)
+                    --optional: Chrome 이 없으면 오류 대신 안내만 하고 종료 코드 0 (그림 없이 Mermaid 다이어그램으로 코멘트가 만들어집니다)
+    nacholens media upload --from <build --out 폴더> --pr N [--head <SHA>] [--repo <체크아웃>] [--remote <이름|주소>] [--repo-url https://…] [--branch nacholens-media] [--skip-on-denied]
+                    snap 그림을 같은 저장소의 고아 브랜치 nacholens-media 의 pr-<N>/<head7>/ 에 올리고 커밋 SHA 로 고정한 URL 을 <from>/media/media-url.json 에 적습니다
+                    (임시 클론에서만 작업·force push 없음·같은 head 를 다시 올리면 새 커밋 없음). 쓰기 권한이 없으면(포크 PR) 실패, --skip-on-denied 면 건너뜀(0)
+    nacholens media prune  [--repo <체크아웃>] [--remote <이름|주소>] [--repo-url https://…] [--branch nacholens-media] [--apply] [--superseded] [--skip-on-denied]
+                    닫히거나 머지된 PR 의 그림 폴더를 찾아 보여 줍니다(기본은 dry-run). --apply 면 새 커밋으로 지웁니다. --superseded 는 열린 PR 의 오래된 head 폴더도 지웁니다
     nacholens pr    --from <build --out 폴더> [--lang en|ko] [--repo-url https://github.com/<o>/<r>] [--pr N]
-                    [--player-url https://…] [--media-url https://…] [--out <pr.md>]
+                    [--player-url https://…] [--media-url https://…] [--out <pr.md>] [--comment] [--skip-on-denied]
                     PR 코멘트 마크다운 (요약·구조도·흐름별 시퀀스·단계·기획 대조·재테스트 체크리스트·모델 밖 변경)
+                    그림 주소는 --media-url 이 없으면 media upload 가 적어 둔 media-url.json 을 씁니다 (같은 커밋일 때만)
+                    --comment: 만든 pr.md 를 PR 의 코멘트로 올립니다. <!-- nacholens:pr --> 로 시작하는 코멘트가 있으면 그 코멘트를 갱신(여러 개면 첫 번째), 없으면 새로 작성 (gh 필요, --repo-url 과 --pr 필요)
 
   검토 패널 (build):  --before-model <파일>  변경 전 모델 (있으면 흐름 자체를 전/후 비교)
                       --intent <intent.json>  기획 의도 (기대사항을 모델과 대조)
@@ -72,7 +83,7 @@ const USAGE = `nacholens — AI 가 바꾼 백엔드 변경을 유즈케이스 �
               4 --strict-intent 에서 기획 의도가 미충족
 `;
 
-const BOOL = new Set(["strict", "strict-intent", "json", "help", "claude", "agents", "global", "force"]);
+const BOOL = new Set(["strict", "strict-intent", "json", "help", "claude", "agents", "global", "force", "optional", "comment", "skip-on-denied", "apply", "superseded"]);
 function parseArgs(argv) {
   const pos = [], opt = {};
   for (let i = 0; i < argv.length; i++) {
@@ -253,8 +264,9 @@ export function run(argv, env = process.env, log = console.log) {
     return run(args, env, log);
   }
 
-  if (cmd === "snap") return runSnap(opt, log);
-  if (cmd === "pr") return runPr(opt, log);
+  if (cmd === "snap") return runSnap(opt, log, env);
+  if (cmd === "pr") return runPr(opt, log, env);
+  if (cmd === "media") return runMedia(pos, opt, log, env);
 
   const modelArg = pos[0] ?? opt.model ?? (opt.repo ? defaultModelPath(opt.repo) : null);
   if (!modelArg) throw new Error("model.json 경로(또는 --repo)가 필요합니다\n" + USAGE);
@@ -449,7 +461,7 @@ function httpsOpt(opt, k) {
   return v;
 }
 
-function runPr(opt, log) {
+function runPr(opt, log, env = process.env) {
   if (!opt.from) throw new Error("pr 는 --from <build --out 폴더> 가 필요합니다\n" + USAGE);
   const dir = resolve(opt.from), at = (f) => join(dir, f);
   const lang = opt.lang ?? "en";
@@ -462,7 +474,9 @@ function runPr(opt, log) {
     if (!repoUrl) throw new Error("--pr 은 --repo-url 과 함께 써야 합니다");
     pr = Number(opt.pr);
   }
-  const playerUrl = httpsOpt(opt, "player-url"), mediaUrl = httpsOpt(opt, "media-url");
+  const playerUrl = httpsOpt(opt, "player-url");
+  let mediaUrl = httpsOpt(opt, "media-url");
+  if (opt.comment && !(repoUrl && pr)) throw new Error("--comment 는 --repo-url 과 --pr 이 필요합니다 (어느 PR 에 올릴지 알아야 합니다)");
   if (!existsSync(at("report.json"))) throw new Error(`${dir} 에 report.json 이 없습니다: 먼저 nacholens build --repo … --out ${opt.from} 를 실행하세요`);
   const report = readJson(at("report.json"), "report.json");
   const modelPath = opt.model ?? report.modelPath;
@@ -476,16 +490,49 @@ function runPr(opt, log) {
   const mediaDir = resolve(opt.media ?? at("media"));
   const media = existsSync(join(mediaDir, "manifest.json")) ? readJson(join(mediaDir, "manifest.json"), "media manifest") : null;
   if (media && media.head && report.head && media.head !== report.head) log(`⚠ 그림(${String(media.head).slice(0, 7)})과 build(${String(report.head).slice(0, 7)})의 커밋이 다릅니다: snap 을 다시 실행하세요`);
+  // pictures that `media upload` hosted: linked automatically, but only when they were made for this very commit
+  const hosted = join(mediaDir, "media-url.json");
+  if (media && !mediaUrl && existsSync(hosted)) {
+    const h = readJson(hosted, "media-url.json");
+    if (h.head && report.head && h.head !== report.head) log(`⚠ media-url.json 의 그림(${String(h.head).slice(0, 7)})은 다른 커밋용이라 쓰지 않습니다 (build ${String(report.head).slice(0, 7)}): media upload 를 다시 실행하세요`);
+    else if (HTTPS.test(String(h.url))) { mediaUrl = h.url; log(`그림 주소: media-url.json (${h.url})`); }
+  }
   if (media && !mediaUrl) log("그림이 있지만 --media-url 이 없어 그림 없이(다이어그램만) 만듭니다.");
   const text = buildPrComment({ model, changes, review, report, media, opt: { lang, repoUrl, pr, playerUrl, mediaUrl, version: version() } });
   const outFile = resolve(opt.out ?? at("pr.md"));
   writeFileSync(outFile, text);
   log(`생성: ${outFile} (${text.length}자)`);
-  if (mediaUrl && media?.files?.length) log(`그림 ${media.files.length}개를 ${mediaUrl}/ 아래에 올려야 코멘트에 보입니다 (${mediaDir})`);
+  if (mediaUrl && media?.files?.length && !existsSync(hosted)) log(`그림 ${media.files.length}개를 ${mediaUrl}/ 아래에 올려야 코멘트에 보입니다 (${mediaDir})`);
+  if (opt.comment) {
+    try { upsertComment({ repoUrl, pr, file: outFile, env: { ...process.env, ...env }, log }); }
+    catch (e) {
+      if (!e.denied) throw e;
+      if (!opt["skip-on-denied"]) { e.message += " — 건너뛰려면 --skip-on-denied"; throw e; }
+      log(`⚠ ${e.message}\n  코멘트 올리기를 건너뜁니다. 만든 내용은 ${outFile} 에 있습니다.`);
+    }
+  }
   return EXIT.OK;
 }
 
-async function runSnap(opt, log) {
+function runMedia(pos, opt, log, env = process.env) {
+  const sub = pos[0];
+  if (sub !== "upload" && sub !== "prune") throw new Error("media 는 하위 명령이 필요합니다: media upload | media prune\n" + USAGE);
+  const e = { ...process.env, ...env };
+  try {
+    if (sub === "upload") {
+      if (!opt.from) throw new Error("media upload 는 --from <build --out 폴더> 가 필요합니다\n" + USAGE);
+      uploadMedia({ from: opt.from, opt, env: e, log });
+    } else pruneMedia({ opt, env: e, log });
+    return EXIT.OK;
+  } catch (err) {
+    if (!err.denied) throw err;
+    if (!opt["skip-on-denied"]) { err.message += " — 건너뛰려면 --skip-on-denied"; throw err; }
+    log(`⚠ ${err.message}\n  ${sub === "upload" ? "그림 업로드를 건너뜁니다 (코멘트는 그림 없이, Mermaid 다이어그램으로 만들어집니다)" : "그림 정리를 건너뜁니다"}.`);
+    return EXIT.OK;
+  }
+}
+
+async function runSnap(opt, log, env = process.env) {
   if (!opt.page) throw new Error("snap 은 --page <build 결과 .html> 가 필요합니다\n" + USAGE);
   const page = resolve(opt.page);
   if (!existsSync(page)) throw new Error(`페이지가 없습니다: ${page}`);
@@ -499,8 +546,13 @@ async function runSnap(opt, log) {
   if (!themes.length || themes.some((t) => t !== "light" && t !== "dark") || new Set(themes).size !== themes.length) throw new Error("--themes 는 light, dark 또는 light,dark");
   const lang = opt.lang ?? "en";
   if (!LANGS.includes(lang)) throw new Error(`--lang 은 ${LANGS.join("|")}`);
-  const { snap } = await import("./snap.js");
-  const m = await snap({ page, out: resolve(opt.out ?? join(dirname(page), "media")), chrome: opt.chrome, flows: int("flows", 0, 10, 3), fps: int("fps", 4, 25, 10), themes, lang, log });
+  const { snap, findChrome } = await import("./snap.js");
+  const e = { ...process.env, ...env };
+  if (opt.optional && !findChrome(opt.chrome, e)) {
+    log("Chrome/Chromium 을 찾지 못해 그림 만들기를 건너뜁니다 (--optional). 코멘트는 그림 없이 Mermaid 다이어그램으로 만들어집니다.");
+    return EXIT.OK;
+  }
+  const m = await snap({ page, env: e, out: resolve(opt.out ?? join(dirname(page), "media")), chrome: opt.chrome, flows: int("flows", 0, 10, 3), fps: int("fps", 4, 25, 10), themes, lang, log });
   log(`그림 ${m.files.length}개 · manifest.json`);
   return EXIT.OK;
 }

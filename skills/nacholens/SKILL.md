@@ -1,7 +1,7 @@
 ---
 name: nacholens
 description: Use when a user wants to SEE what an AI changed in a backend/infra repo without reading code, or wants a PR explained in the PR itself. Builds a use-case flow animation (Claude -> artifact, others -> single HTML) with the changed parts highlighted from a git diff, and a PR comment with pictures.
-version: 1.5.0
+version: 1.6.0
 ---
 
 # nacholens — show what an AI changed in a backend, without reading code
@@ -14,7 +14,7 @@ You (the agent) write a small **model** of the repo (components, use cases, step
 
 ## 0. Before you start
 
-- Needs **Node.js ≥ 20** (checked on Node 24) and **git**. No packages to install.
+- Needs **Node.js 24+** and **git**. No packages to install.
 - `SV` below means the CLI. Find it in this order: `./cli/src/cli.js` next to this file (installed copy) → `$NACHOLENS_HOME/src/cli.js` → the `src/cli.js` of the nacholens repository. Run it as `node <path>/cli.js <command>`. Without any copy, `npx -y @mafianacho/nacholens@latest <command>` runs the published package (and `… install --to <dir>` puts this file and a CLI copy into `<dir>/nacholens/`).
 - Collection depth (§0.1) needs **nacholens ≥ 0.3.2**: `SV --version` prints it. An older CLI does not know `--depth` (it ignores a `depth` field in the model), so there is no depth check; tell the user to update instead of pretending the check ran.
 - **Try it in 30 seconds**: `SV demo` builds the bundled demo shop (gateway → API → SQLite + 3 third parties, with a real change) into `./nacholens-demo/`.
@@ -275,14 +275,14 @@ Full reference: `docs/review.md` in the repository. Use these when the user asks
 - **Regression map** needs `--repo --base`. Report the use cases to re-check and why (shared table / endpoint / part / wire), and the ones with `none-found` tests. `none-found` means "no test file mentions the route", not "untested".
 - Keep `verify` green first: all three views read the model, so a wrong model gives a wrong verdict.
 
-## 9. Put it in the pull request (nacholens ≥ 0.4.0)
+## 9. Put it in the pull request (nacholens ≥ 0.4.0; hosting and the sticky comment need ≥ 0.5.0)
 
 Use this when the user wants the change explained **in the PR itself** ("put it in the PR", "so reviewers understand from the PR alone"). Full reference: `docs/pr.md`. The goal: someone who reads only the PR page understands what changed, where, why it matters and what to re-test.
 
 1. **Build for the PR range**: `SV build --repo R --base <PR base branch or merge-base> --head <PR head> --out nacholens-out --lang <user's language>`. Add `--intent` when there is a plan (§8) and `--before-model` when you wrote one. Keep `verify` green: the comment is only as true as the model.
-2. **Pictures (optional)**: `SV snap --page nacholens-out/<product>.html --lang <lang>` (Node 22+ and a local Chrome; it finds Playwright's Chromium too). It writes `nacholens-out/media/` (`map.png`, one GIF per changed flow, dark versions, `manifest.json`). No Chrome: skip it, the comment still works with Mermaid diagrams.
-3. **Host the pictures (ask first)**: GitHub has no upload API for comments, so pictures need a URL. With the user's OK, push them to an orphan branch `nacholens-media` of the same repository under `pr-<n>/<head7>/` and pass `--media-url https://github.com/<o>/<r>/raw/<that commit>/pr-<n>/<head7>` (commands in `docs/pr.md`). Never put pictures of a private repository anywhere public. If pushing is not allowed, leave `--media-url` out.
+2. **Pictures (optional)**: `SV snap --page nacholens-out/<product>.html --lang <lang> --optional` (Node 24+ and a local Chrome; it finds Playwright's Chromium too). It writes `nacholens-out/media/` (`map.png`, one GIF per changed flow, dark versions, `manifest.json`). No Chrome: `--optional` skips with a note and the comment still works with Mermaid diagrams.
+3. **Host the pictures (ask first)**: GitHub has no upload API for comments, so pictures need a URL. With the user's OK run `SV media upload --from nacholens-out --pr <n>`: it pushes them to the orphan branch `nacholens-media` of the same repository under `pr-<n>/<head7>/` (in a throw-away clone, never forced, no new commit when nothing changed) and records the commit-pinned URL in `nacholens-out/media/media-url.json`, which `pr` picks up by itself. Never put pictures of a private repository anywhere public. If pushing is not allowed (a fork), leave this step out. Closed PRs: `SV media prune` lists their pictures (dry run), `--apply` removes them in a new commit.
 4. **Player link**: if you are Claude and gave the page as an artifact, the user can publish it ("Publish" gives a link anyone with the link can open). For a private repository ask before suggesting that. Pass the link as `--player-url`. Other agents: only link a page the user already hosts.
-5. **Write the comment**: `SV pr --from nacholens-out --lang <lang> --repo-url https://github.com/<o>/<r> --pr <n> [--media-url …] [--player-url …]` → `nacholens-out/pr.md`. Read it once before posting: the flow sections must name the use cases you expect, and the "outside the flows" list is the honest remainder (§4.1).
-6. **Post or update ONE comment (ask first unless asked)**: find the comment containing `<!-- nacholens:pr -->` and PATCH it, otherwise post it with `gh pr comment` (commands in `docs/pr.md`). After each new push to the PR, rebuild, re-snap and update the same comment; the comment names the commit it was made for.
-7. Tell the user the comment URL, what it shows (changed flows and steps by name) and what you left out (no pictures, no player link, flows listed by name only).
+5. **Write and post ONE comment (ask first unless asked)**: `SV pr --from nacholens-out --lang <lang> --repo-url https://github.com/<o>/<r> --pr <n> --comment` writes `nacholens-out/pr.md` and posts it, or updates the comment that starts with `<!-- nacholens:pr -->` (the first one if there are several). Read `pr.md` once before posting: the flow sections must name the use cases you expect, and the "outside the flows" list is the honest remainder (§4.1). Without `--comment` only `pr.md` is written. With a read-only token (a fork PR) add `--skip-on-denied` to log and move on instead of failing.
+6. **Every push, automatically**: `docs/action/nacholens-pr.yml` is an example GitHub Action (build, snap, host, comment; pinned actions; pictures are opt-in because pushing needs `contents: write`, which only the hosting job gets). Offer it; do not install it unasked.
+7. Tell the user the comment URL (the CLI prints it), what it shows (changed flows and steps by name) and what you left out (no pictures, no player link, flows listed by name only).

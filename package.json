@@ -1,6 +1,6 @@
 {
   "name": "@mafianacho/nacholens",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "See what an AI changed in a backend without reading code: use-case flow animation with a change overlay derived from git diff. Zero dependencies.",
   "license": "Apache-2.0",
   "type": "module",
@@ -8,7 +8,7 @@
     "nacholens": "./src/cli.js"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "files": [
     "src",
@@ -26,6 +26,7 @@
     "docs/model-schema.md",
     "docs/review.md",
     "docs/pr.md",
+    "docs/action/nacholens-pr.yml",
     "CHANGELOG.md",
     "LICENSE",
     "NOTICE",

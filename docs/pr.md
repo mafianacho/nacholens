@@ -6,11 +6,13 @@ what changed in which flow, in pictures and in words, what the plan said, what t
 
 ```bash
 nacholens build --repo . --base origin/main --head HEAD --out nacholens-out [--intent intent.json] [--lang ko]
-nacholens snap  --page nacholens-out/<product>.html [--lang ko]          # optional: needs Node 22+ and a local Chrome
-nacholens pr    --from nacholens-out --repo-url https://github.com/<owner>/<repo> --pr <number> \
+nacholens snap  --page nacholens-out/<product>.html [--lang ko] [--optional]    # optional: needs Node 24+ and a local Chrome
+nacholens media upload --from nacholens-out --pr <number>                       # optional: host the pictures (below)
+nacholens pr    --from nacholens-out --repo-url https://github.com/<owner>/<repo> --pr <number> [--comment] \
                 [--media-url <where the pictures are>] [--player-url <link to the page>] [--lang ko]
-gh pr comment <number> --body-file nacholens-out/pr.md                     # or update the existing one (below)
 ```
+
+`pr --comment` posts the text as the pull request's comment, or updates the one that is already there (see below). To run all of this on every push, use the [GitHub Action example](#run-it-on-every-push-github-action).
 
 ## What the comment holds
 
@@ -40,29 +42,68 @@ With `--repo-url` and `--pr`, a step's code links open the line in the pull requ
 
 Chrome is looked up in `--chrome`, `$CHROME`, `PATH`, the macOS application folder and Playwright's download cache. The GIF encoder is part of nacholens (one shared palette, no dithering, only the changed rectangle per frame).
 
-GitHub has no API to upload a comment attachment, so the pictures need a URL. For a repository you can push to, the simplest home is a separate branch of the same repository that holds only pictures:
+Without Chrome (a runner without a browser, `--optional`): `snap --optional` says so and exits 0 without writing pictures, and the comment shows the Mermaid diagrams instead. Without `--optional` a missing Chrome is an error.
+
+## Hosting the pictures: `media upload`
+
+GitHub has no API to upload a comment attachment, so the pictures need a URL. For a repository you can push to, the home is a separate **orphan branch of the same repository** that holds only pictures, `nacholens-media`:
 
 ```bash
-git worktree add --detach ../nacholens-media && cd ../nacholens-media
-git switch nacholens-media 2>/dev/null || git switch --orphan nacholens-media
-mkdir -p pr-<n>/<head7> && cp ../<repo>/nacholens-out/media/*.png ../<repo>/nacholens-out/media/*.gif pr-<n>/<head7>/
-git add pr-<n> && git commit -m "nacholens pictures for #<n> at <head7>" && git push origin nacholens-media
-echo "https://github.com/<owner>/<repo>/raw/$(git rev-parse HEAD)/pr-<n>/<head7>"   # → --media-url
+nacholens media upload --from nacholens-out --pr <number> [--repo <checkout>] [--head <sha>]
+# media upload: 3 files -> nacholens-media/pr-12/a1b2c3d (new commit 7f3e9a1)
+# media URL: https://github.com/<owner>/<repo>/raw/<media commit>/pr-12/a1b2c3d
 ```
 
-The commit in the URL keeps old comments pointing at their own pictures. GitHub shows `github.com/<owner>/<repo>/raw/…` images directly (not through its image proxy). In a public repository anyone can see them, as they can see the code; in a private one only people with access. Pictures of a private repository must not go to a public place.
+- The files go to `pr-<n>/<head7>/` (PR number and the first 7 characters of the head commit). The URL is pinned to the **media commit**, so an old comment keeps showing its own pictures. The address is written to `nacholens-out/media/media-url.json`, and `pr` uses it by itself when it was made for the same commit (`--media-url` still wins).
+- Nothing else is touched. The work happens in a throw-away clone in the temp folder; your working tree, index, branches and git config do not change, and a code branch's diff never contains pictures. The push is never forced; if another job pushed first, the upload is redone on top of the new tip.
+- Uploading the same head again changes nothing (no new commit). A re-snap with different pictures replaces that head's folder in a new commit.
+- `--pr`, `--head` and the file names are checked against a short allow-list first (digits; lowercase hex; letters, digits, `._-` with `.png`/`.gif`; no links). The branch must look like a picture branch (only `pr-<n>` folders at the top), otherwise nothing is pushed.
+- `--repo-url` is the public address of the repository (default: taken from the remote). `--remote` is a remote name or an address (default `origin`), for a job that has no checkout.
+- No permission to push (a fork pull request, a read-only token): it fails with a clear message, and with `--skip-on-denied` it says so and exits 0, so the comment is still posted, with Mermaid diagrams.
+- In a public repository anyone can see the pictures, as they can see the code; in a private one only people with access. Pictures of a private repository must not go to a public place: this command only ever writes to the repository you point it at.
+
+### Tidy up: `media prune`
+
+```bash
+nacholens media prune                  # dry run: lists the pictures of closed and merged PRs (uses `gh pr list`)
+nacholens media prune --apply          # removes them in a NEW commit on the media branch (no force push)
+nacholens media prune --apply --superseded   # also the older heads of PRs that are still open
+```
+
+A PR that `gh` does not list is kept, and so is every open PR. The deletion is a normal commit, so the files stay in the branch history: links in old comments keep working, but the repository does not get smaller (the branch tip does, so a fresh clone is quick).
 
 ## One comment per pull request
 
-The comment starts with `<!-- nacholens:pr -->`. Update it instead of adding a new one on every push:
+The comment starts with `<!-- nacholens:pr -->`. `pr --comment` (needs `gh`, `--repo-url` and `--pr`) updates it instead of adding a new one on every push:
 
-```bash
-id=$(gh api "repos/<owner>/<repo>/issues/<n>/comments" --paginate --jq '.[] | select(.body | contains("<!-- nacholens:pr -->")) | .id' | head -1)
-if [ -n "$id" ]; then gh api -X PATCH "repos/<owner>/<repo>/issues/comments/$id" -F body=@nacholens-out/pr.md
-else gh pr comment <n> --body-file nacholens-out/pr.md; fi
-```
+- no comment that starts with the marker -> a new comment is posted;
+- one -> that comment is edited in place (same link, same place in the conversation);
+- two or more (for example from an older setup) -> the first, oldest one is edited and the others are named in the log and left alone.
 
-Posting is a visible action in someone's repository: an agent asks before it posts or pushes pictures, unless it was asked to.
+A comment that only quotes the marker somewhere in its text is never overwritten. The comment carries the commit it was made for, so an older comment is recognisably out of date.
+
+Posting is a visible action in someone's repository: an agent asks before it posts or pushes pictures, unless it was asked to (installing the workflow below is that ask).
+
+Without a read-write token (a fork pull request, or Dependabot) GitHub refuses the write. `pr --comment` then fails with "no write permission", and `--skip-on-denied` turns that into a log line and exit 0; `pr.md` is still written.
+
+## Run it on every push (GitHub Action)
+
+[`docs/action/nacholens-pr.yml`](action/nacholens-pr.yml) is a ready workflow: copy it to `.github/workflows/`, commit the model as `.nacholens/model.json`, and every push to a pull request rebuilds the explanation and updates the same comment.
+
+It runs `checkout -> setup-node 24 -> build -> snap -> media upload -> pr --comment` in three jobs, because posting and hosting need different permissions:
+
+| Job | Permissions | Does |
+|---|---|---|
+| `build` | `contents: read` | runs the tool on the pull request's code, takes the pictures |
+| `host-pictures` (opt-in) | `contents: write` | pushes `pr-<n>/<head7>/` to `nacholens-media`; checks out no code |
+| `comment` | `contents: read`, `pull-requests: write` | writes or updates the one comment; checks out no code |
+
+- **Pictures are opt-in**: set the repository variable `NACHOLENS_PICTURES` to `true`. Without it, no job can write to the repository and the comment uses Mermaid diagrams, which GitHub draws itself.
+- **Fork pull requests** get a read-only token, so every job skips them (`head.repo.full_name == github.repository`), and the CLI also treats a refused write as a skip (`--skip-on-denied`).
+- **No Chrome** (a self-hosted runner without a browser): `snap --optional` skips the pictures and the comment falls back to Mermaid.
+- Every action is pinned to a commit SHA (the release is in a comment); the workflow uses `pull_request`, never `pull_request_target`, and values reach shell scripts only through `env:`.
+- `NACHOLENS_PKG` at the top pins the nacholens version.
+- Clean up now and then with `nacholens media prune --apply` (it needs `contents: write`, so run it by hand or in its own scheduled workflow).
 
 ## Limits
 

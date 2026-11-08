@@ -10,7 +10,7 @@
 
 ## 5분 시작
 
-필요한 것: **Node.js ≥ 20(Node 24에서 확인함), git** (설치할 패키지 없음).
+필요한 것: **Node.js 24+, git** (설치할 패키지 없음).
 
 **1. 데모 보기 (30초)**
 
@@ -73,7 +73,7 @@ nacholens impact --repo R --base B --model M
 리뷰어가 PR 화면만 보고 이해하도록 build 결과를 PR 코멘트 하나로 만듭니다. 요약, 구조도(그림 또는 Mermaid), 바뀐 흐름별 단계(번호는 플레이어와 같음), 기획 대조, 다시 테스트할 체크리스트, 흐름에 안 잡힌 변경, 기준 커밋이 들어갑니다. 자세한 내용(영문): [`pr.md`](pr.md).
 
 ```bash
-nacholens snap --page nacholens-out/<제품>.html --lang ko      # 선택: Node 22+, 로컬 Chrome 필요. 그림 + 흐름별 GIF (라이트·다크)
+nacholens snap --page nacholens-out/<제품>.html --lang ko      # 선택: Node 24+, 로컬 Chrome 필요. 그림 + 흐름별 GIF (라이트·다크)
 nacholens pr   --from nacholens-out --lang ko --repo-url https://github.com/<o>/<r> --pr <번호> [--media-url …] [--player-url …]
 ```
 
