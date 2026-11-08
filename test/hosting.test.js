@@ -221,6 +221,12 @@ exit 0
   assert.equal(r.count(), 3, "initial + racer + ours: history only grew");
 });
 
+test("history is never rewritten: the media code has no force push in any spelling", () => {
+  const src = readFileSync(join(root, "src/media.js"), "utf8").replace(/\/\/.*$/gm, "");
+  assert.ok(!/--force|force-with-lease|"-f"|"\+[A-Za-z]|--mirror|--delete/.test(src), "no --force, no +refspec, no delete push");
+  assert.ok(/"push", "-q", "origin", `HEAD:refs\/heads\/\$\{this\.branch\}`/.test(src), "the one push is a plain fast-forward push of HEAD");
+});
+
 /* ───────── media prune ───────── */
 
 function pruneRig() {
