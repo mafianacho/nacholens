@@ -92,7 +92,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO_URL: ${{ github.server_url }}/${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: nacholens media upload --from nacholens-out --pr "$PR_NUMBER" --repo-url "$REPO_URL" --remote "$REPO_URL.git" --skip-on-denied
+        run: |
+          if [ ! -f nacholens-out/media/manifest.json ]; then echo "No pictures were made (no Chrome on the runner): nothing to host."; exit 0; fi
+          nacholens media upload --from nacholens-out --pr "$PR_NUMBER" --repo-url "$REPO_URL" --remote "$REPO_URL.git" --skip-on-denied
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: nacholens-media-url

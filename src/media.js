@@ -237,7 +237,10 @@ export function pruneMedia({ opt, env = process.env, log = () => {} }) {
     for (const x of doomed) log(`삭제 예정: ${x.rel} (${x.why}) ${kb(x.bytes)}`);
     if (!opt.apply) { log(`${doomed.length}곳을 지우려면 같은 명령에 --apply 를 붙이세요 (새 커밋으로 지우며, 이전 커밋에는 그대로 남습니다)`); return { removed: [], planned: doomed.map((x) => x.rel), commit: w.head() }; }
 
-    const msg = [`nacholens: remove pictures of closed PRs (${closedNums.map((n) => "#" + n).join(", ") || "none"})`, olderNums.length ? `and older heads of open PRs (${olderNums.map((n) => "#" + n).join(", ")})` : ""].filter(Boolean).join("; ");
+    const parts = [];
+    if (closedNums.length) parts.push(`remove pictures of closed PRs (${closedNums.map((n) => "#" + n).join(", ")})`);
+    if (olderNums.length) parts.push(`remove older pictures of open PRs (${olderNums.map((n) => "#" + n).join(", ")})`);
+    const msg = `nacholens: ${parts.join("; ")}`;
     const r = w.commitAndPush(() => {
       const present = doomed.map((x) => x.rel).filter((p) => existsSync(join(w.dir, p)));
       if (present.length) w.must("삭제", ["rm", "-r", "-q", "--ignore-unmatch", "--", ...present]);
