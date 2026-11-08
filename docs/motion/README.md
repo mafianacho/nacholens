@@ -14,7 +14,7 @@ parts are orange, the new outside call is green, and the three questions get the
   Pretendard (the design-system stack) if `docs/motion/fonts/PretendardVariable.woff2` is present (OFL, not committed, git-ignored;
   `npm pack pretendard@1.3.9` has it under `dist/web/variable/woff2/`), otherwise a system CJK font.
   Icons are inline line icons (one 1.8 px stroke family), no icon package.
-- `render.mjs`: captures frames with headless Chrome over the DevTools protocol (Node 22+, no npm packages).
+- `render.mjs`: captures frames with headless Chrome over the DevTools protocol (Node 24+, no npm packages).
 - `encode.mjs`: encodes the frames into a GIF with one shared palette (Node; dev-only packages from `scripts/tools`: `npm --prefix scripts/tools ci`).
 
 ```bash

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.0
+
+**Node 24 is the baseline, and a pull request explains itself on every push.** Breaking: Node 20 and 22 are no longer supported (see below).
+
+- **Node 24+.** `engines` is `>=24`, CI runs Node 24, the publish workflow uses Node 24, and every document says "Node 24+". A Node older than 24 stops at startup with one clear message instead of a missing-feature crash. The `snap` Node-22 branch (global `WebSocket`) is gone: Node 24 has it built in, and the demo-shop test no longer skips for `node:sqlite`. Why breaking: 0.4.0 allowed Node 20 and 22 (`engines >=20`); 0.5.0 does not, so it is a minor bump while 0.x.
+- **Pictures hosted for you.** `nacholens media upload --from <build out> --pr N` pushes the `snap` pictures to the orphan branch `nacholens-media` under `pr-<n>/<head7>/` and records the commit-pinned URL in `media/media-url.json`; `pr` links it by itself when it was made for the same commit. The work is done in a throw-away clone (your working tree, index and branches are not touched), pushes are never forced (a lost race is redone on the new tip), uploading the same head again makes no commit, the PR number, head and file names are checked against an allow-list, and a branch that does not look like a picture branch is refused. No permission to push (fork PR, read-only token): a clear failure, or `--skip-on-denied` to skip with exit 0.
+- **Tidy up.** `nacholens media prune` lists the pictures of closed and merged PRs (`gh pr list`, dry run by default); `--apply` removes them in a new commit, `--superseded` also the older heads of open PRs. PRs that `gh` does not list are kept. History is never rewritten, so old comments keep their pictures.
+- **One sticky comment.** `nacholens pr --comment` (with `--repo-url` and `--pr`) posts `pr.md`, or updates the comment that starts with `<!-- nacholens:pr -->` (the first one when there are several; comments that only quote the marker are never touched), using `gh api`. `--skip-on-denied` turns a refused write (fork PR) into a log line and exit 0.
+- **No Chrome, no problem.** `snap --optional` exits 0 with a note when there is no Chrome/Chromium; the comment then uses Mermaid diagrams.
+- **GitHub Action example**: `docs/action/nacholens-pr.yml`. Three jobs (build `contents: read`; host-pictures `contents: write`, opt-in via the variable `NACHOLENS_PICTURES`, checks out no code; comment `pull-requests: write`, checks out no code), every action pinned to a commit, `pull_request` only, fork PRs skipped, values reach scripts only through `env:`. A test pins that shape.
+- Skill: §9 now uses `media upload`, `pr --comment` and the Action (skill version 1.6.0).
+
 ## 0.4.0
 
 **Explain a pull request in the pull request.** A reviewer who reads only the PR page understands what changed, in which flow, what the plan said and what to re-test. See `docs/pr.md`.

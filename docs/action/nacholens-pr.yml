@@ -1,0 +1,132 @@
+# nacholens: explain every pull request inside the pull request.
+#
+# Copy this file to .github/workflows/nacholens-pr.yml. On every push to a pull request it
+#   checks out the code -> builds the explanation -> takes pictures -> (optional) hosts them -> writes ONE comment.
+# The comment starts with <!-- nacholens:pr -->, so a new push UPDATES the same comment instead of adding another.
+#
+# What you need in the repository:
+#   - the model of your code, committed as .nacholens/model.json (an agent writes it with the nacholens skill; see docs/guide.md)
+# Optional:
+#   - Pictures: set the repository variable NACHOLENS_PICTURES to "true" (Settings > Secrets and variables > Actions > Variables).
+#     Without it the comment still works: it shows Mermaid diagrams, which GitHub draws itself, and no job here can write to the repository.
+#
+# Why three jobs (least privilege). Posting a comment needs pull-requests: write. Hosting pictures means pushing to the
+# branch nacholens-media, which needs contents: write. No job gets both:
+#   build            contents: read           runs the tool; sees the pull request's code
+#   host-pictures    contents: write          opt-in; checks out NO code, only pushes pr-<n>/<head7>/ to nacholens-media
+#   comment          pull-requests: write     writes or updates the comment; checks out NO code
+#
+# Pull requests from forks: GitHub gives them a read-only token, so nothing can be pushed or posted. Every job skips them
+# (the `if:` lines below) and the CLI also treats a refused write as "skip", not as a failure (--skip-on-denied).
+#
+# Every action is pinned to a commit (the comment is its release); update the pins with Dependabot or by hand.
+name: nacholens-pr
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: nacholens-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions: {}
+
+env:
+  # Pin the version you tested. To try an unreleased build, use "github:mafianacho/nacholens#<branch>".
+  NACHOLENS_PKG: "@mafianacho/nacholens@0.5.0"
+  NACHOLENS_MODEL: ".nacholens/model.json"
+
+jobs:
+  build:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the base commit must be there to compare
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+      - name: Install nacholens
+        run: npm install --global --ignore-scripts "$NACHOLENS_PKG"
+      - name: Build the explanation
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          nacholens build --repo . --model "$NACHOLENS_MODEL" --base "$BASE_SHA" --head "$HEAD_SHA" --format html --out nacholens-out
+          cp "$NACHOLENS_MODEL" nacholens-out/model.json
+      - name: Take the pictures (ubuntu-latest has Chrome; without Chrome this step is skipped and Mermaid is used)
+        run: nacholens snap --page "$(ls nacholens-out/*.html | head -n 1)" --out nacholens-out/media --optional
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: nacholens-out
+          path: nacholens-out
+          retention-days: 1
+          if-no-files-found: error
+
+  host-pictures:
+    needs: build
+    if: vars.NACHOLENS_PICTURES == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # the only write access: a push to the nacholens-media branch, never to a code branch
+    steps:
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+      - name: Install nacholens
+        run: npm install --global --ignore-scripts "$NACHOLENS_PKG"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: nacholens-out
+          path: nacholens-out
+      - name: Upload the pictures to the nacholens-media branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: nacholens media upload --from nacholens-out --pr "$PR_NUMBER" --repo-url "$REPO_URL" --remote "$REPO_URL.git" --skip-on-denied
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: nacholens-media-url
+          path: nacholens-out/media/media-url.json
+          retention-days: 1
+          if-no-files-found: ignore
+
+  comment:
+    needs: [build, host-pictures]
+    if: ${{ !cancelled() && needs.build.result == 'success' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+      - name: Install nacholens
+        run: npm install --global --ignore-scripts "$NACHOLENS_PKG"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: nacholens-out
+          path: nacholens-out
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: needs.host-pictures.result == 'success'
+        continue-on-error: true # no hosted pictures: the comment simply has none
+        with:
+          name: nacholens-media-url
+          path: nacholens-out/media
+      - name: Write the comment, or update the one that is already there
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: nacholens pr --from nacholens-out --model nacholens-out/model.json --repo-url "$REPO_URL" --pr "$PR_NUMBER" --comment --skip-on-denied

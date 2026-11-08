@@ -115,8 +115,8 @@ test("snap / pr: arguments are checked before anything runs", () => {
 });
 
 const chrome = findChrome();
-const canSnap = typeof WebSocket === "function" && !!chrome;
-test("snap + pr end to end on the committed demo page (real headless Chrome)", { skip: canSnap ? false : "needs Node 22+ and a local Chrome/Chromium", timeout: 120000 }, async () => {
+const canSnap = !!chrome;
+test("snap + pr end to end on the committed demo page (real headless Chrome)", { skip: canSnap ? false : "needs a local Chrome/Chromium", timeout: 120000 }, async () => {
   const out = mkdtempSync(join(tmpdir(), "nl-snap-"));
   const logs = [];
   const code = await run(["snap", "--page", join(root, "examples", "demo-shop.html"), "--out", out, "--flows", "1", "--themes", "light", "--fps", "6"], {}, (m) => logs.push(m));

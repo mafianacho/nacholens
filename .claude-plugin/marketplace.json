@@ -9,7 +9,7 @@
       "name": "nacholens",
       "source": "./",
       "description": "See what an AI changed in a backend without reading code: use-case flow animation with a change overlay derived from git diff. Zero dependencies.",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "author": {
         "name": "Mafianacho Inc."
       },

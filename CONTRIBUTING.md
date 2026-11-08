@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping. nacholens has **no runtime dependencies** and wants to keep it that way: Node >= 20 (checked on Node 24) and git are enough. The whole repository is Node: no Python, no other runtime.
+Thanks for helping. nacholens has **no runtime dependencies** and wants to keep it that way: Node 24+ and git are enough. The whole repository is Node: no Python, no other runtime.
 
 ## Set up
 
@@ -10,7 +10,7 @@ npm test                 # node --test, a few seconds
 node src/cli.js demo     # builds ./nacholens-demo/demo-shop.html from the bundled demo app
 ```
 
-The demo app itself (`demo/shop/v1`, `v2`) needs Node >= 22.13 (`node:sqlite`); its end-to-end test is skipped on older Node.
+The demo app itself (`demo/shop/v1`, `v2`) uses `node:sqlite`, which Node 24 has built in.
 
 ## What lives where
 
@@ -26,6 +26,9 @@ The demo app itself (`demo/shop/v1`, `v2`) needs Node >= 22.13 (`node:sqlite`); 
 | `src/player/` | the page: template, CSS, JS (no framework, no network) |
 | `src/pr.js` | `pr`: the build as one GitHub PR comment (markdown, Mermaid) |
 | `src/snap.js`, `src/gif.js`, `src/png.js` | `snap`: pictures of the player via a local headless Chrome; GIF encoder and PNG decoder |
+| `src/media.js`, `src/pr-comment.js`, `src/proc.js` | `media upload` / `media prune` (the `nacholens-media` branch, in a throw-away clone) and `pr --comment` (the sticky comment); `git` and `gh` are called with argv arrays only |
+| `src/node-check.js` | stops an older Node at startup with a clear message |
+| `docs/action/nacholens-pr.yml` | the example GitHub Action (pinned actions, least privilege; `test/action.test.js` pins its shape) |
 | `src/install.js`, `src/demo.js` | `install` command; deterministic demo repository |
 | `skills/nacholens/SKILL.md` | what an agent reads to do the whole job |
 | `demo/`, `models/demo-shop/`, `examples/` | public demo app, its model, generated pages |
@@ -43,7 +46,7 @@ The demo app itself (`demo/shop/v1`, `v2`) needs Node >= 22.13 (`node:sqlite`); 
 
 ## Pull requests
 
-CI runs `npm test` on Node 20, 22 and 24 for pull requests. The publish workflow uses Node 24. It uses no secrets. Fill in the checklist in the PR template.
+CI runs `npm test` on Node 24 for pull requests. The publish workflow uses Node 24 too. Older Node stops at startup with a clear message. It uses no secrets. Fill in the checklist in the PR template.
 
 ## License
 

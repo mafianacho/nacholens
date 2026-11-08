@@ -1,5 +1,5 @@
 // `nacholens snap`: pictures of a built page for a pull request, taken with a local headless Chrome over the
-// DevTools protocol (Node >= 22 for the global WebSocket; no npm packages). It drives the page's own
+// DevTools protocol (Node 24+: the global WebSocket is built in; no npm packages). It drives the page's own
 // `window.__nacholens` API, so the pictures are exactly what the player shows:
 //   map.png (+ map.dark.png)          the stage of the first changed flow, at its first changed step
 //   <use case>.gif (+ .dark.gif)      each changed flow played step by step, changed steps held longer
@@ -95,11 +95,11 @@ const stepNo = (i) => (i < NUMS.length ? NUMS[i] : `(${i + 1})`);
  * @param {number} [o.fps=10]
  * @param {string[]} [o.themes=["light","dark"]]
  * @param {string} [o.lang="en"] words of the corner label
+ * @param {object} [o.env] environment used to look for Chrome (default: process.env)
  */
-export async function snap({ page, out, chrome, flows = 3, fps = 10, width = 1352, height = 860, themes = ["light", "dark"], lang = "en", log = () => {} }) {
-  if (typeof WebSocket !== "function") throw new Error("snap 은 Node 22 이상이 필요합니다 (전역 WebSocket)");
-  const bin = findChrome(chrome);
-  if (!bin) throw new Error("Chrome/Chromium 을 찾지 못했습니다: --chrome <경로> 또는 CHROME 환경 변수를 지정하세요");
+export async function snap({ page, out, chrome, flows = 3, fps = 10, width = 1352, height = 860, themes = ["light", "dark"], lang = "en", log = () => {}, env = process.env }) {
+  const bin = findChrome(chrome, env);
+  if (!bin) throw new Error("Chrome/Chromium 을 찾지 못했습니다: --chrome <경로> 또는 CHROME 환경 변수를 지정하세요 (그림 없이 가려면 --optional)");
   const S = STR[lang] ?? STR.en;
   mkdirSync(out, { recursive: true });
   const c = await openChrome(bin);
