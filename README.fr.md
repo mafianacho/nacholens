@@ -2,19 +2,23 @@
 
 [English](README.md) · [日本語](README.ja.md) · [Deutsch](README.de.md) · **Français** · [中文](README.zh.md) · [한국어](README.ko.md)
 
-**Le codage avec des agents IA est une boîte noire. nacholens en fait une boîte blanche.**
+**Voyez ce qu'une IA a changé dans votre code, sans lire le code.**
 
-![Animation (légendes en anglais). Avant : vous demandez un changement à un agent IA et recevez un mur de diff et trois questions sans réponse (qu'a-t-il touché, de nouveaux appels externes, que retester). Après : nacholens montre la requête à travers les services, met en évidence les parties modifiées et nouvelles, et répond aux trois.](docs/images/blackbox-to-whitebox.gif)
+![Avant : un mur de diff et trois questions. Après : nacholens montre la requête à travers les services, met en évidence le modifié et le nouveau, et y répond (légendes en anglais).](docs/images/blackbox-to-whitebox.gif)
 
-Vous demandez un changement à un agent et recevez un mur de diff. Qu'a-t-il touché ? A-t-il ajouté un appel vers un service externe ? Que faut-il retester ? nacholens répond sur une seule page.
+Un agent IA modifie votre code et rend un long diff. Qu'a-t-il touché ? Appelle-t-il un service externe ? Que faut-il retester ? nacholens répond par une image à lire :
 
-Voyez ce qu'une IA a changé dans un backend, sans lire le code. nacholens transforme un dépôt en une seule page : choisissez un cas d'usage et regardez la requête passer du client à vos services, à la base de données et aux services tiers, les parties modifiées étant mises en évidence à partir de `git diff`.
+- **Choisissez ce que fait un utilisateur** (connexion, commande). Un point voyage du navigateur aux services, à la base de données et aux services externes, étape par étape.
+- **Ce qui a changé est en couleur** : jaune = modifié, vert = nouveau.
+- **Chaque étape renvoie au vrai code**, rien n'est deviné.
 
-![nacholens : une requête traverse la boutique de démonstration, parties modifiées en évidence](docs/images/overview.png)
+Pour les chefs de projet, testeurs et développeurs. Inutile de lire du code.
 
-## Utilisation
+## À utiliser en 3 étapes
 
-Ouvrez votre agent de code IA (Claude Code, Codex, Cursor, …) dans le dépôt que vous voulez voir, copiez le bloc ci-dessous, écrivez votre demande sur la ligne `Ma demande :` et collez-le.
+1. Ouvrez votre agent de code IA (Claude Code, Codex, Cursor, …) dans le projet.
+2. Copiez le bloc ci-dessous, écrivez ce que vous voulez voir sur `Ma demande :` et collez-le.
+3. Ouvrez la page que l'agent vous donne.
 
 ```text
 Utilise nacholens pour répondre à ma demande ci-dessous sur ce dépôt, sous la forme d'une page que je peux ouvrir.
@@ -31,24 +35,33 @@ Comment :
 4. Une fois la page générée, donne-moi son chemin et explique simplement ce qu'elle montre.
 ```
 
-Exemples de demandes:
+Ce que vous pouvez demander :
 
 - `Qu'est-ce qui a changé dans les 5 derniers commits, et que dois-je retester ?`
 - `Montre comment fonctionne la connexion, du navigateur à la base de données.`
 - `Compare cette branche avec main : quels parcours ce travail a-t-il touchés ?`
 - `Explique la PR #12 dans la PR elle-même : images, parcours modifiés et ce qu'il faut retester.`
 
-## Essayer la démo
+## Dans votre pull request
+
+nacholens écrit aussi **un commentaire dans la pull request**, compréhensible depuis la seule page de la PR : images des parcours modifiés, chaque étape en mots simples avec lien vers le code, une liste à retester et ce que les images ne couvrent pas. [Comment ça marche](docs/pr.md)
+
+<img src="docs/images/pr-comment.png" alt="Commentaire nacholens sur une pull request (en anglais) : résumé, image des changements, premier parcours modifié" width="600">
+
+## Essayer sans votre propre projet
 
 ```bash
 npx -y @mafianacho/nacholens@latest demo
 # → ./nacholens-demo/demo-shop.html (à ouvrir dans un navigateur)
 ```
 
+## Bon à savoir
+
+- Votre projet est seulement lu, jamais modifié. nacholens n'envoie rien sur le réseau.
+- Ni compte ni serveur : seulement Node.js 24+ et git.
+
 ## Plus
 
-- [Guide](docs/guide.md) (en anglais) : commandes, fonctionnement de la vue des changements, limites
-- [Guide d'agent](skills/nacholens/SKILL.md), [format du modèle](docs/model-schema.md), [panneau de revue](docs/review.md), [commentaire de PR](docs/pr.md)
-- [Contribuer](CONTRIBUTING.md), [Sécurité](SECURITY.md)
+[Guide](docs/guide.md) (en anglais) · [Guide d'agent](skills/nacholens/SKILL.md) · [Format du modèle](docs/model-schema.md) · [Panneau de revue](docs/review.md) · [Commentaire de PR](docs/pr.md) (en anglais) · [Contribuer](CONTRIBUTING.md) · [Sécurité](SECURITY.md)
 
-Apache License 2.0 ([`LICENSE`](LICENSE), [`NOTICE`](NOTICE)). Les polices intégrées sont sous SIL Open Font License 1.1 ([`FONTLOG`](src/player/fonts/FONTLOG.md)). Made by [Mafianacho Inc.](https://mafianacho.com)
+Apache License 2.0 ([`LICENSE`](LICENSE), [`NOTICE`](NOTICE)). Polices intégrées : SIL Open Font License 1.1 ([`FONTLOG`](src/player/fonts/FONTLOG.md)). Made by [Mafianacho Inc.](https://mafianacho.com)
