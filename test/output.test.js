@@ -322,6 +322,15 @@ test("every README is the same short page: language links, one copy-paste block 
   }
 });
 
+test("the Korean docs link only to files that exist, point at the Korean PR page, and contain no Han characters", () => {
+  for (const f of ["README.ko.md", "docs/guide.ko.md", "docs/pr.ko.md"]) {
+    const md = readFileSync(join(root, f), "utf8");
+    assert.ok(!/\p{Script=Han}/u.test(md.replace("[日本語](README.ja.md)", "").replace("[中文](README.zh.md)", "")), `${f} has no Han characters`);
+    for (const m of md.matchAll(/\]\(((?!https?:)[^)#]+)\)/g)) assert.ok(existsSync(join(root, f.includes("/") ? "docs" : ".", m[1])), `${f} link ${m[1]}`);
+    if (f !== "docs/pr.ko.md") assert.ok(!/\]\((docs\/)?pr\.md\)/.test(md), `${f} links the Korean PR page`);
+  }
+});
+
 test("verify warns (exit 0) about evidence without `contains`, because line drift on such items cannot be detected", () => {
   const dir = join(tmp(), "repo");
   const { head } = makeDemoRepo(dir);

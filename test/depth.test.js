@@ -381,7 +381,7 @@ test("every README copy block gets one depth line (all three levels named); the 
 test("npm pack ships everything depth needs (sources, models, changelog, skill, guides) and no tests or scripts", () => {
   const out = JSON.parse(execFileSync("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], { cwd: root, encoding: "utf8" }));
   const files = new Set(out[0].files.map((f) => f.path));
-  for (const f of ["src/depth.js", "src/scan.js", "src/cli.js", "src/install.js", "src/pr.js", "src/snap.js", "src/gif.js", "src/png.js", "docs/pr.md", "CHANGELOG.md", "skills/nacholens/SKILL.md", "models/demo-shop/model.json", "models/demo-shop/model.brief.json", "models/demo-shop/model.diff.json", "docs/guide.md", "docs/guide.ko.md", "docs/model-schema.md", "package.json"])
+  for (const f of ["src/depth.js", "src/scan.js", "src/cli.js", "src/install.js", "src/pr.js", "src/snap.js", "src/gif.js", "src/png.js", "docs/pr.md", "docs/pr.ko.md", "CHANGELOG.md", "skills/nacholens/SKILL.md", "models/demo-shop/model.json", "models/demo-shop/model.brief.json", "models/demo-shop/model.diff.json", "docs/guide.md", "docs/guide.ko.md", "docs/model-schema.md", "package.json"])
     assert.ok(files.has(f), `package is missing ${f}`);
   assert.ok([...files].every((f) => !f.startsWith("test/")), "no tests in the package");
   assert.equal(out[0].version, "0.4.0");
